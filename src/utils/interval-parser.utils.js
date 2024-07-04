@@ -1,4 +1,4 @@
-
+import { isObj } from "./general.utils";
 
 /**
  * tooClose() checks whether the current value is within 5 seconds
@@ -115,7 +115,7 @@ export const makeTimeMessage = (offset, suffix, forceSufix) => {
  *
  * @returns {string} textual representation of the fraction offset
  */
-export const makeFractionMessage = (suffixes, numerator, denominator) => {
+export const makeFractionMessage = (numerator, denominator, suffixes) => {
   let fraction = '';
 
   // reduce the denominator to its
@@ -201,6 +201,86 @@ export const filterOffsets = (offsets, max) => {
   })
 };
 
+const getX = (unit) => {
+  switch (unit) {
+    case 'm':
+      return 60000;
+
+    case 'h':
+      return 3600000;
+
+    case 's':
+    default:
+      return 1000;
+  }
+}
+
+const getNonRelativeMsgs = (intervalObj, milliseconds, suffixes) => {
+  const half = (milliseconds / 2);
+  const interval = (intervalObj.time * 1000);
+  const output = [];
+
+  for (let offset = interval; offset <= half; offset += interval) {
+    output.push({
+      message: makeTimeMessage(offset, suffixes.last),
+      offset,
+      // raw: intervalObj.raw,
+    }, {
+      message: makeTimeMessage(offset, suffixes.first),
+      offset: milliseconds - offset,
+      // raw: intervalObj.raw,
+    });
+  }
+
+  return output;
+};
+
+const getRelativeMsgs = (intervalObj, milliseconds, suffix) => {
+  const output = [];
+  const interval = getX(intervalObj.unit);
+  let count = 0;
+
+  if (intervalObj.every === true) {
+    interval *= intervalObj.time;
+    count = milliseconds / interval;
+  } else {
+    count = intervalObj.time;
+  }
+  const modifier = (intervalObj.relative !== 'first')
+    ? 0
+    : milliseconds;
+  const forceSufix = (intervalObj.relative === 'first');
+
+  for (let a = count; a > 0; a -= 1) {
+    const offset = a * interval;
+    output.push({
+      message: makeTimeMessage(offset, suffix, forceSufix),
+      offset: posMinus(modifier, offset),
+      // raw: intervalObj.raw,
+    });
+  }
+
+  return output;
+};
+
+const getMultiplierMsgs = (intervalObj, milliseconds, suffix) => {
+  const output = [];
+  const interval = (intervalObj.time * getX(intervalObj.unit));
+  const modifier = (intervalObj.relative === 'last')
+    ? 0
+    : milliseconds
+
+  for (let offset = interval; offset <= intervalObj.time; offset += interval) {
+    output.push({
+      message: makeTimeMessage(offset, suffix),
+      offset: posMinus(modifier, offset),
+      // raw: intervalObj.raw,
+    });
+  }
+
+  return output;
+};
+
 /**
  * getTimeOffsetAndMessage() returns a list of time offset
  * objects for the given time interval.
@@ -217,199 +297,40 @@ export const filterOffsets = (offsets, max) => {
  *                 message properties used for announcing intervals
  */
 export const getTimeOffsetAndMessage = (
-  suffixes,
   intervalObj,
   milliseconds,
-  raw,
+  suffixes,
 ) => {
   const suffix = (intervalObj.relative === 'first')
     ? suffixes.first
     : suffixes.last;
-  let offsets = [];
 
   if ((intervalObj.all === true || intervalObj.every === true) || intervalObj.multiplier > 1) {
     if ((intervalObj.all === true || intervalObj.every === true) && intervalObj.multiplier <= 1) {
       if (intervalObj.relative === '') {
         // not relative so announce time relative to nearest edge
         // of time (e.g. 1 minute to go & 1 minute gone)
-        const half = (milliseconds / 2);
-        const interval = (intervalObj.time * 1000);
-        for (let offset = interval; offset <= half; offset += interval) {
-          offsets.push({
-            offset: offset,
-            message: makeTimeMessage(offset, suffixes.last),
-            raw: intervalObj.raw,
-          }, {
-            offset: milliseconds - offset,
-            message: makeTimeMessage(offset, suffixes.first),
-            raw: intervalObj.raw,
-          });
-        }
-      } else {
-        // interval relative === false
-        // i.e. relative = "first" or "last"
-        let interval = 0;
-        let count = 0;
-        switch (intervalObj.unit) {
-          case 'm':
-            interval = 60000;
-            break;
-          case 'h':
-            interval = 3600000;
-            break;
-          case 's':
-          default:
-            interval = 1000;
-        }
-
-        if (intervalObj.every === true) {
-          interval *= intervalObj.time;
-          count = milliseconds / interval;
-        } else {
-          count = intervalObj.time;
-        }
-        const modifier = (intervalObj.relative !== 'first')
-          ? 0
-          : milliseconds;
-        const forceSufix = (intervalObj.relative === 'first');
-
-        for (let a = count; a > 0; a -= 1) {
-          const offset = a * interval;
-          offsets.push({
-            offset: posMinus(modifier, offset),
-            message: makeTimeMessage(offset, suffix, forceSufix),
-            raw: intervalObj.raw,
-          });
-        }
+        return getNonRelativeMsgs(intervalObj, milliseconds, suffixes);
       }
-    } else if (intervalObj.multiplier > 1) {
-      const unit = (intervalObj.unit === 's')
-        ? 10000
-        : (intervalObj.unit === 'm')
-          ? 60000
-          : 3600000;
-      const interval = (intervalObj.time * unit);
-      const modifier = (intervalObj.relative === 'last')
-        ? 0
-        : milliseconds
 
-      for (let offset = interval; offset <= intervalObj.time; offset += interval) {
-        offsets.push({
-          offset: posMinus(modifier, offset),
-          message: makeTimeMessage(offset, suffix),
-          raw: intervalObj.raw,
-        });
-      }
+      // interval relative === false
+      // i.e. relative = "first" or "last"
+      return getRelativeMsgs(intervalObj, milliseconds, suffix);
     }
-  } else {
-    const interval = (intervalObj.time * 1000);
-    const offset = (intervalObj.relative !== 'first')
-      ? interval
-      : (milliseconds - interval);
-    offsets = [{
-      offset: offset,
-      message: makeTimeMessage(interval, suffix),
-      raw: raw,
-    }];
-  }
-
-  return offsets;
-};
-
-/**
- * parseRawIntervals() builds an array of objects which in turn can
- * be used to build promises that trigger speach events.
- *
- * @param {object} config talking timer config
- * @param {string} rawIntervals
- * @param {number} durationMilli
- * @param {boolean} omit
- *
- * @returns {array}
- */
-export const parseRawIntervals = (config, rawIntervals, durationMilli, omit) => {
-  const regex = new RegExp('(?:^|\\s+)(all|every)?[_-]?([0-9]+)?[_-]?((?:la|fir)st)?[_-]?(?:([1-9][0-9]*)[_-]?([smh]?)|([1-9])?[_-]?1\\/([2-9]|10))(?=\\s+|$)', 'ig');
-  let matches;
-  let timeIntervals = [];
-  let fractionIntervals = [];
-  let orderIntervals = [];
-
-  if (typeof rawIntervals !== 'string' || rawIntervals === '') {
-    return [];
-  }
-  const exclude = (typeof omit === 'boolean')
-    ? omit
-    : false;
-
-  while ((matches = regex.exec(rawIntervals)) !== null) {
-    const allEvery = (typeof matches[1] !== 'undefined')
-      ? matches[1].toLocaleLowerCase()
-      : '';
-    const firstLast = (typeof matches[3] !== 'undefined')
-      ? matches[3].toLocaleLowerCase()
-      : '';
-
-    let interval = {
-      all: (allEvery === 'all' || firstLast === ''),
-      every: (allEvery === 'every' && firstLast !== ''),
-      multiplier: (typeof matches[2] !== 'undefined' && typeof (matches[2] * 1) === 'number')
-        ? Number.parseInt(matches[2], 10)
-        : 1,
-      relative: firstLast,
-      exclude: exclude,
-      isFraction: false,
-      raw: matches[0],
-    };
-
-    if (interval.every === true) {
-      interval.all = false;
-      interval.multiplier = 0;
-    } else if (interval.all === true) {
-      interval.multiplier = 0;
-    }
-
-    if (typeof matches[7] !== 'undefined') {
-      // item is a fraction
-      const denominator = Number.parseInt(matches[7], 10);
-
-      interval.isFraction = true;
-      interval.denominator = denominator;
-
-      if (interval.multiplier > (denominator - 1)) {
-        interval.multiplier = (denominator - 1);
-      }
-
-      const tmpIntervals = getFractionOffsetAndMessage(interval, durationMilli, interval.raw);
-
-      if (config.priority === 'order') {
-        orderIntervals = orderIntervals.concat(tmpIntervals);
-      } else {
-        fractionIntervals = fractionIntervals.concat(tmpIntervals);
-      }
-    } else {
-      // item is a number
-      matches[4] = Number.parseInt(matches[4], 10);
-      interval.unit = (typeof matches[5] === 'string')
-        ? matches[5].toLocaleLowerCase()
-        : 's';
-      interval.time = matches[4];
-
-      const tmpIntervals = getTimeOffsetAndMessage(interval, durationMilli, interval.raw);
-      if (config.priority === 'order') {
-        orderIntervals = orderIntervals.concat(tmpIntervals);
-      } else {
-        timeIntervals = timeIntervals.concat(tmpIntervals);
-      }
+    if (intervalObj.multiplier > 1) {
+      return getMultiplierMsgs(intervalObj, milliseconds, suffix);
     }
   }
 
-  const output = (config.priority === 'order')
-    ? orderIntervals
-    : (config.priority === 'time')
-      ? timeIntervals.concat(fractionIntervals)
-      : fractionIntervals.concat(timeIntervals);
-
-  return sortOffsets(filterOffsets(output, durationMilli));
+  const interval = (intervalObj.time * 1000);
+  const offset = (intervalObj.relative !== 'first')
+    ? interval
+    : (milliseconds - interval);
+  return [{
+    message: makeTimeMessage(interval, suffix),
+    offset: offset,
+    // raw: intervalObj.raw,
+  }];
 };
 
 /**
@@ -427,7 +348,11 @@ export const parseRawIntervals = (config, rawIntervals, durationMilli, omit) => 
  * @returns {array} list of interval objects containing offset &
  *                 message properties used for announcing intervals
  */
-export const getFractionOffsetAndMessage = (suffixes, intervalObj, milliseconds) => {
+export const getFractionOffsetAndMessage = (
+  intervalObj,
+  milliseconds,
+  suffixes,
+) => {
   let interval = 0;
   const half = milliseconds / 2;
 
@@ -454,20 +379,20 @@ export const getFractionOffsetAndMessage = (suffixes, intervalObj, milliseconds)
       offsets.push({
         offset: posMinus(minus, (interval * a)),
         message: makeFractionMessage(a, intervalObj.denominator) + suffix,
-        raw: intervalObj.raw,
+        // raw: intervalObj.raw,
       });
     }
   } else {
     for (let a = 1; a <= (count / 2); a += 1) {
       const message = makeFractionMessage(a, intervalObj.denominator);
       offsets.push({
-        offset: (milliseconds - (interval * a)),
         message: message + suffixes.last,
+        offset: (milliseconds - (interval * a)),
         // raw: intervalObj.raw,
       },
       {
-        offset: (interval * a),
         message: message + suffixes.first,
+        offset: (interval * a),
         // raw: intervalObj.raw,
       });
     }
@@ -476,8 +401,8 @@ export const getFractionOffsetAndMessage = (suffixes, intervalObj, milliseconds)
   const filtered = offsets.map(item => {
     if (tooClose(item.offset, half)) {
       return {
-        offset: half,
         message: suffixes.half,
+        offset: half,
         // raw: item.raw,
       };
     } else {
@@ -486,4 +411,111 @@ export const getFractionOffsetAndMessage = (suffixes, intervalObj, milliseconds)
   });
 
   return filtered;
+};
+
+/**
+ * parseRawIntervals() builds an array of objects which in turn can
+ * be used to build promises that trigger speech events.
+ *
+ * @param {number} durationMilli
+ * @param {string} rawIntervals
+ * @param {boolean} omit
+ * @param {string} priority talking timer config
+ *
+ * @returns {array}
+ */
+export const parseRawIntervals = (
+  durationMilli,
+  rawIntervals,
+  omit = false,
+  priority = 'fraction',
+  suffixes = null,
+) => {
+  const post = (isObj(suffixes))
+    ? suffixes
+    : { first: ' gone', last: ' to go', half: 'Half way' };
+  const regex = /(?<=>^|\s)(?<allEvery>all|every)?[_-]?(?<multiplyer>[0-9]+)?[_-]?(?<firstLast>(?:la|fir)st)?[_-]?(?:(?<hmsNum>[1-9][0-9]*)[_-]?(?<hmsUnit>[smh]?)|(?<numerator>[1-9])?[_-]?1\/(?<denominator>[2-9]|10))(?=\s|$)/ig;
+  let matches;
+  let timeIntervals = [];
+  let fractionIntervals = [];
+  let orderIntervals = [];
+
+  if (typeof rawIntervals !== 'string' || rawIntervals === '') {
+    return [];
+  }
+  const exclude = (typeof omit === 'boolean')
+    ? omit
+    : false;
+
+  while ((matches = regex.exec(rawIntervals)) !== null) {
+    const tmp = matches.groups;
+    const allEvery = (typeof tmp.allEvery !== 'undefined')
+      ? tmp.allEvery.toLocaleLowerCase()
+      : '';
+    const firstLast = (typeof tmp.firstLast !== 'undefined')
+      ? tmp.firstLast.toLocaleLowerCase()
+      : '';
+
+    const interval = {
+      all: (allEvery === 'all' || firstLast === ''),
+      every: (allEvery === 'every' && firstLast !== ''),
+      exclude: exclude,
+      isFraction: false,
+      multiplier: (typeof tmp.multiplyer !== 'undefined' && typeof (tmp.multiplyer * 1) === 'number')
+        ? Number.parseInt(tmp.multiplyer, 10)
+        : 1,
+      relative: firstLast,
+      raw: matches[0],
+      time: null,
+      unit: null,
+    };
+
+    if (interval.every === true) {
+      interval.all = false;
+      interval.multiplier = 0;
+    } else if (interval.all === true) {
+      interval.multiplier = 0;
+    }
+
+    if (typeof tmp.denominator !== 'undefined') {
+      // item is a fraction
+      const denominator = Number.parseInt(tmp.denominator, 10);
+
+      interval.isFraction = true;
+      interval.denominator = denominator;
+
+      if (interval.multiplier > (denominator - 1)) {
+        interval.multiplier = (denominator - 1);
+      }
+
+      const tmpIntervals = getFractionOffsetAndMessage(interval, durationMilli, post);
+
+      if (priority === 'order') {
+        orderIntervals = orderIntervals.concat(tmpIntervals);
+      } else {
+        fractionIntervals = fractionIntervals.concat(tmpIntervals);
+      }
+    } else {
+      // item is a number
+      tmp.hmsNum = Number.parseInt(tmp.hmsNum, 10);
+      interval.unit = getX(tmp.hmsUnit);
+      interval.time = tmp.hmsNum;
+
+      const tmpIntervals = getTimeOffsetAndMessage(interval, durationMilli, post);
+
+      if (priority === 'order') {
+        orderIntervals = orderIntervals.concat(tmpIntervals);
+      } else {
+        timeIntervals = timeIntervals.concat(tmpIntervals);
+      }
+    }
+  }
+
+  const output = (priority === 'order')
+    ? orderIntervals
+    : (priority === 'time')
+      ? timeIntervals.concat(fractionIntervals)
+      : fractionIntervals.concat(timeIntervals);
+
+  return sortOffsets(filterOffsets(output, durationMilli));
 };

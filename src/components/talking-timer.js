@@ -1,4 +1,6 @@
 import { LitElement, css, html } from 'lit';
+import { sayDataIsValid, validateTimeDuration } from '../utils/talking-timer.utils';
+import { parseRawIntervals } from '../utils/interval-parser.utils';
 
 /**
  * An example element.
@@ -37,6 +39,12 @@ export class TalkingTimer extends LitElement {
      */
     humanremaining: { type: String, reflect: true },
 
+    /**
+     * List of messages to announce
+     *
+     * @property {Array<{time: number, msg: string}>} _messages
+     */
+
     _remainingLabel: { type: String, state: true },
 
     /**
@@ -67,14 +75,14 @@ export class TalkingTimer extends LitElement {
      *
      * @property {boolean} noPause
      */
-    nopause: { type: Boolean, default: false },
+    nopause: { type: Boolean },
 
     /**
      * Whether or not to say the end phrase
      *
      * [default: false]
      *
-     * @property {string} nosayend
+     * @property {boolean} nosayend
      */
     nosayend: { type: Boolean },
 
@@ -91,6 +99,39 @@ export class TalkingTimer extends LitElement {
      * @property {number} percent
      */
     percent: { type: Number, reflect: true },
+
+    /**
+     * `priority` sets which announcements are discarded and which
+     * are spoken if multiple announcements are due around the same
+     * time.
+     *
+     * To reduce the amount of talking, announcements can only be
+     * made if they are seven seconds later or earlier than another
+     * anouncement. By default fraction anouncements have priority
+     * e.g. when the timer is set to 3 minutes, the "Half way"
+     * announcement is also the same as the "One minute, thirty
+     * seconds to go" anouncement so the "Half way" announcement
+     * is spoken but the "One minute, thirty seconds to go." is
+     * skipped.
+     *
+     * `priority` options:
+     * It's possible (even probable) that, when using fraction
+     * intervals (like `1/2`) and time intervals (like `30s`) you
+     * will get two announcements for the same interval. In this
+     * case, the priority decides which is spoken.
+     *
+     * * `fraction` (default) Fraction intervals are spoken if
+     *              there's a confilict between a time and a fraction
+     *              announcement.
+     * * `time`     time intervals are spoken if there's a confilict
+     *              between a time and a fraction announcement.
+     * * `order`    order they're defined in `speak` - the one defined
+     *              first over-rides one spoken at a similar time but
+     *              defined later.
+     *
+     * @property {string} priority
+     */
+    priority: { type: String },
 
     /**
      * The number of milliseconds remaining
@@ -136,7 +177,7 @@ export class TalkingTimer extends LitElement {
      *
      * [default: []]
      *
-     * @property {object[]} heading
+     * @property {Array<{time: number, msg: string}>} saydata
      */
     saydata: { type: Array },
 
@@ -204,9 +245,10 @@ export class TalkingTimer extends LitElement {
      * >           time remaining and the spacing of intervals if
      * >           `saydata` is empty.
      *
-     * @property {number} timer
+     * (non-reactive)
+     *
+     * @property {number} _total
      */
-    _total: { type: Number, state: true },
 
     /**
      * The number of times the button has been clicked.
@@ -221,7 +263,7 @@ export class TalkingTimer extends LitElement {
      *
      * @property {number|string} duration
      */
-    duration: {  },
+    duration: {},
   }
 
   constructor() {
@@ -231,6 +273,7 @@ export class TalkingTimer extends LitElement {
     this.noendchime = false;
     this.nopause = false;
     this.nosayend = false;
+    this.priority = 'fraction'
     this.percent = 1;
     this.say = '1/2 30s last20 last15 allLast10';
     this.saydata = [];
@@ -238,6 +281,49 @@ export class TalkingTimer extends LitElement {
     this.startmessage = 'Ready. Set. Go!';
     this.selfdestruct = -1;
     this.state = 'unset';
+
+    // ----------------------------------------------------
+    // START: non-reactive properties
+
+    /**
+     * List of messages to announce
+     *
+     * Messages are ordered from next to last
+     *
+     * @property {Array<{time: number, msg: string}>} _messages
+     */
+    this._messages = [];
+
+    /**
+     * The next message to be spoke
+     *
+     * > __Note:__ `_nextMsg` shifted off the front of the
+     * >           `_messages` list at the start of the timer or
+     * >           when the current `_nextMsg` is spoken.
+     */
+    this._nextMsg = null;
+
+    /**
+     * The total number milliseconds the timer will run for.
+     *
+     * Once the timer has started, this number will not be updated.
+     *
+     * > __Note:__ `_total` is used to calculate the percentage of
+     * >           time remaining and the spacing of intervals if
+     * >           `saydata` is empty.
+     *
+     * @property {number} _total
+     */
+    this._total = 0;
+
+    this._suffixes = {
+      first: ' gone',
+      last: ' to go',
+      half: 'Half way',
+    };
+
+    //  END:  non-reactive properties
+    // ----------------------------------------------------
   }
 
   pauseResume() {
@@ -250,7 +336,7 @@ export class TalkingTimer extends LitElement {
     }
 
     return (txt !== '')
-      ? html`<button value=>${txt}</button>`
+      ? html`<button .value="${txt}" @click=${this._btnClick}>${txt}</button>`
       : '';
   }
 
@@ -271,7 +357,7 @@ export class TalkingTimer extends LitElement {
             : ''
           }
           ${(this.state === 'ready')
-            ? html`<button>Start</button>`
+            ? html`<button value="start" @click=${this._btnClick}>Start</button>`
             : ''
           }
           ${(this.nopause === false)
@@ -279,7 +365,7 @@ export class TalkingTimer extends LitElement {
             : ''
           }
           ${(this.state === 'paused' || this.state === 'ended')
-            ? html`<button>Restart</button>`
+            ? html`<button value="restart" @click=${this._btnClick}>Restart</button>`
             : ''
           }
         </footer>
@@ -287,8 +373,107 @@ export class TalkingTimer extends LitElement {
     `
   }
 
+  parseAttributes () {
+    // ----------------------------------------------------
+    // START: Process duration
+
+    const tmp = validateTimeDuration(this.duration);
+
+    if (tmp === false) {
+      throw new Error('<talking-timer> must have a duration to work with. `duration` was invalid');
+    }
+    this._total = tmp;
+
+    //  END:  Process duration
+    // ----------------------------------------------------
+    // START: Message list
+
+    if (sayDataIsValid(this.saydata)) {
+      this._messages = this.saydata.map(item => ({ time: item.time, message: item.msg }));
+      this._messages.sort((a, b) => {
+        if (a.time > b.time) {
+          return -1;
+        }
+        if (a.time < b.time) {
+          return 1;
+        }
+        return 0;
+      });
+    } else if (typeof this.say === 'string' || this.say.trim() === '') {
+      this._messages = parseRawIntervals(this._total, this.say);
+    }
+
+    //  END:  Message list
+    // ----------------------------------------------------
+
+    this.state = 'ready' ;
+  }
+
+  connectedCallback() {
+    super.connectedCallback();
+
+    this.parseAttributes();
+  }
+
+  startTimer() {
+
+  }
+
+  pauseTimer() {
+
+  }
+
+  resumeTimer() {
+
+  }
+
+  resetTimer() {
+
+  }
+
   _onClick() {
     this.count++
+  }
+  _btnClick(event) {
+    const { value } = event.target;
+
+    switch (value) {
+      case 'start':
+        if (this.state === 'ready') {
+          this.state = 'running';
+          this.startTimer();
+        } else {
+          throw new Error('cannot start timer because <talking-timer> is not ready');
+        }
+        break;
+
+      case 'Pause':
+        if (this.state === 'running') {
+          this.state = 'paused';
+          this.pauseTimer();
+        } else {
+          throw new Error('cannot pause timer because <talking-timer> is not running');
+        }
+        break;
+
+      case 'Resume':
+        if (this.state === 'paused') {
+          this.state = 'running';
+          this.resumeTimer();
+        } else {
+          throw new Error('cannot resume timer because <talking-timer> is not paused');
+        }
+        break;
+
+      case 'restart':
+          if (this.state === 'paused' || this.state === 'ended') {
+            this.state = 'running';
+            this.startTimer();
+          } else {
+            throw new Error('cannot resume timer because <talking-timer> is not paused and not ended');
+          }
+
+    }
   }
 
   static get styles() {

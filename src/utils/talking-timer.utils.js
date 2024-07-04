@@ -1,3 +1,5 @@
+import { isObj } from './general.utils';
+
 export const multipliers = {
   hours: 3600000,
   minutes: 60000,
@@ -154,4 +156,83 @@ export const getWholePart = (input, multiplier) => {
     whole: wholeVal,
     part: input - (wholeVal * multiplier),
   };
+};
+
+export const validateDurationStr = (str) => {
+  const regex = /^(?:(?:(?:([0-1]?[0-9]|2[0-4]):)?([0-5]?[0-9]):)?([0-5]?[0-9])|([6-9][0-9]|[1-9][0-9]{2,5}))$/;
+  const matches = regex.exec(str);
+
+  if (matches !== null) {
+    const len = matches.length
+
+    if (len === 5 && typeof matches[4] !== 'undefined') {
+      let seconds = Number.parseInt(matches[4], 10)
+
+      if (seconds > 86400) {
+        // limit the maximum duration of the timer to 24 hours
+        seconds = 86400
+      }
+
+      return seconds * 1000
+    } else if (len > 0) {
+      let seconds = Number.parseInt(matches[3], 10)
+      let minutes = (typeof matches[2] === 'string' && matches[2] !== '')
+        ? Number.parseInt(matches[2], 10)
+        : 0;
+      let hours = (typeof matches[1] === 'string' && matches[1] !== '')
+        ? Number.parseInt(matches[1], 10)
+        : 0;
+
+      return ((seconds + (minutes * 60) + (hours * 3600)) * 1000);
+    }
+  }
+  return false;
+};
+
+/**
+ * validateTimeDuration() validates the value of the element's `start`
+ * attribute
+ *
+ * __NOTE:__ the parsed value of `start` must be less than 24 hours
+ *
+ * __NOTE ALSO:__ this method also assignes parsed values to object
+ *       properties
+ *
+ * @param {string} time the string value of the
+ *                 element's `start` attribute
+ *
+ * @returns {boolean} TRUE if hoursMinutesSeconds can be parsed.
+ *          FALSE otherwise
+ */
+export const validateTimeDuration = (time) => {
+  const t = typeof time;
+  switch (t) {
+    case 'number':
+      if (time > 86400000) {
+        return 86400000;
+      }
+      if (time > 86400) {
+        // assume time is already in miliseconds
+        return time;
+      }
+      return (time * 1000);
+
+    case 'string':
+      return validateDurationStr(time);
+  }
+  return false;
+};
+
+export const sayDataIsValid = (data) => {
+  if (!Array.isArray(data) || data.length === 0) {
+    return false;
+  }
+
+  for (let a = 0; a < data.length; a += 1) {
+    if (!isObj(data[a]) || typeof data[a].time !== 'number' || typeof data[a].msg !== 'string')  {
+      return false;
+    }
+  }
+
+  return true;
 };
