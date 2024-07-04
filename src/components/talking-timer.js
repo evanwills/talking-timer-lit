@@ -1,6 +1,6 @@
 import { LitElement, css, html } from 'lit';
 import { sayDataIsValid, validateTimeDuration } from '../utils/talking-timer.utils';
-import { parseRawIntervals } from '../utils/interval-parser.utils';
+import { filterOffsets, parseRawIntervals, sayDataAdapter, sortOffsets } from '../utils/interval-parser.utils';
 
 /**
  * An example element.
@@ -46,6 +46,18 @@ export class TalkingTimer extends LitElement {
      */
 
     _remainingLabel: { type: String, state: true },
+
+    /**
+     * Sometimes you just want to add a couple of custom messages in
+     * between the normal interval messages. If that's the case add
+     * your custom messages to `saydata` and set your normal
+     * intervals in `say.
+     *
+     * [default: false]
+     *
+     * @property {boolean} mergesaydata
+     */
+    mergesaydata: { type: Boolean },
 
     /**
      * The number of milliseconds remaining
@@ -177,7 +189,7 @@ export class TalkingTimer extends LitElement {
      *
      * [default: []]
      *
-     * @property {Array<{time: number, msg: string}>} saydata
+     * @property {Array<{offset: number, message: string}>} saydata
      */
     saydata: { type: Array },
 
@@ -186,7 +198,7 @@ export class TalkingTimer extends LitElement {
      *
      * [default: false]
      *
-     * @property {string} saystart
+     * @property {boolean} saystart
      */
     saystart: { type: Boolean },
 
@@ -277,6 +289,7 @@ export class TalkingTimer extends LitElement {
     this.percent = 1;
     this.say = '1/2 30s last20 last15 allLast10';
     this.saydata = [];
+    this.mergesaydata = false;
     this.saystart = false;
     this.startmessage = 'Ready. Set. Go!';
     this.selfdestruct = -1;
@@ -293,6 +306,7 @@ export class TalkingTimer extends LitElement {
      * @property {Array<{time: number, msg: string}>} _messages
      */
     this._messages = [];
+    this._ogMesseges = [];
 
     /**
      * The next message to be spoke
@@ -326,7 +340,7 @@ export class TalkingTimer extends LitElement {
     // ----------------------------------------------------
   }
 
-  pauseResume() {
+  getPauseResumeBtn() {
     let txt = '';
 
     if (this.state === 'running') {
@@ -361,7 +375,7 @@ export class TalkingTimer extends LitElement {
             : ''
           }
           ${(this.nopause === false)
-            ? this.pauseResume()
+            ? this.getPauseResumeBtn()
             : ''
           }
           ${(this.state === 'paused' || this.state === 'ended')
@@ -388,19 +402,19 @@ export class TalkingTimer extends LitElement {
     // ----------------------------------------------------
     // START: Message list
 
-    if (sayDataIsValid(this.saydata)) {
-      this._messages = this.saydata.map(item => ({ time: item.time, message: item.msg }));
-      this._messages.sort((a, b) => {
-        if (a.time > b.time) {
-          return -1;
-        }
-        if (a.time < b.time) {
-          return 1;
-        }
-        return 0;
-      });
+    const validSay = sayDataIsValid(this.saydata);
+
+    if (this.mergesaydata !== true && validSay) {
+      this._ogMesseges = sortOffsets(filterOffsets(sayDataAdapter(this.saydata)));
     } else if (typeof this.say === 'string' || this.say.trim() === '') {
-      this._messages = parseRawIntervals(this._total, this.say);
+      this._ogMesseges = parseRawIntervals(this._total, this.say);
+
+      if (this.mergesaydata === true) {
+        this._ogMesseges = sortOffsets(filterOffsets([
+          ...this._ogMesseges,
+          sayDataAdapter(this.saydata),
+        ]));
+      }
     }
 
     //  END:  Message list
@@ -415,7 +429,14 @@ export class TalkingTimer extends LitElement {
     this.parseAttributes();
   }
 
-  startTimer() {
+  async startTimer() {
+    if (this.state !== 'ready' && this.state !== 'ended') {
+      throw new Error('')
+    }
+    if (this.saystart === true) {
+      // say the start bit.
+    }
+    this._messages = [...this._ogMessages];
 
   }
 
@@ -428,14 +449,34 @@ export class TalkingTimer extends LitElement {
   }
 
   resetTimer() {
-
+    this._messages = [...this._ogMesseges];
   }
 
-  _onClick() {
-    this.count++
+  timerEnded() {
+    if (this.state !== 'running') {
+      throw new Error('');
+    }
+    const oldState = this.state;
+    this.state = 'ended';
+    this._emitStateChange(oldState);
+
+    if (this.nosayend !== true) {
+      // say end bit
+    }
+    if (this.noendchime !== true) {
+      // play end chime
+    }
   }
+
+  _emitStateChange(oldState) {
+    if (oldState !== this.state) {
+      this.dispatchEvent('statechange');
+    }
+  }
+
   _btnClick(event) {
     const { value } = event.target;
+    const oldState = this.state;
 
     switch (value) {
       case 'start':
@@ -474,6 +515,8 @@ export class TalkingTimer extends LitElement {
           }
 
     }
+
+    this._emitStateChange(oldState);
   }
 
   static get styles() {

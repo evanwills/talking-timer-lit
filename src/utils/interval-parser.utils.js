@@ -263,6 +263,22 @@ const getRelativeMsgs = (intervalObj, milliseconds, suffix) => {
   return output;
 };
 
+export const sayDataAdapter = (data) => data.map(
+  item => ({ offset: item.offset, message: item.message }),
+);
+
+/**
+ * Get a list of interval messages based on a multiplier
+ *
+ * @param {object} intervalObj  interval object parsed from speak
+ *                              attribute
+ * @param {number} milliseconds number of milliseconds remaining
+ *                              for timer
+ * @param {string} suffix       string to append to spoken messages
+ *
+ * @returns {array} list of interval objects containing offset &
+ *                 message properties used for announcing intervals
+ */
 const getMultiplierMsgs = (intervalObj, milliseconds, suffix) => {
   const output = [];
   const interval = (intervalObj.time * getX(intervalObj.unit));
@@ -287,11 +303,11 @@ const getMultiplierMsgs = (intervalObj, milliseconds, suffix) => {
  *
  * Used for announcing progress in timer
  *
- * @param {object} suffixes    strings to append to spoken messages
  * @param {object} intervalObj interval object parsed from speak
  *                 attribute
  * @param {number} milliseconds number of milliseconds remaining
  *                 for timer
+ * @param {object} suffixes    strings to append to spoken messages
  *
  * @returns {array} list of interval objects containing offset &
  *                 message properties used for announcing intervals
@@ -414,6 +430,48 @@ export const getFractionOffsetAndMessage = (
 };
 
 /**
+ * Process the matches made by a regular expression, into something
+ * that the rest of the parser can use.
+ *
+ * @param {mixed}   matches patterns matched by a regular expression
+ * @param {boolean} exclude
+ *
+ * @returns {object}
+ */
+const intervalAdapter = (matches, exclude) => {
+  const tmp = matches.groups;
+  const allEvery = (typeof tmp.allEvery !== 'undefined')
+    ? tmp.allEvery.toLocaleLowerCase()
+    : '';
+  const relative = (typeof tmp.relative !== 'undefined')
+    ? tmp.relative.toLocaleLowerCase()
+    : '';
+
+  const output = {
+    all: (allEvery === 'all' || relative === ''),
+    every: (allEvery === 'every' && relative !== ''),
+    exclude,
+    isFraction: false,
+    multiplier: (typeof tmp.multiplyer !== 'undefined' && typeof (tmp.multiplyer * 1) === 'number')
+      ? Number.parseInt(tmp.multiplyer, 10)
+      : 1,
+    relative,
+    raw: matches[0],
+    time: null,
+    unit: null,
+  };
+
+  if (output.every === true) {
+    output.all = false;
+    output.multiplier = 0;
+  } else if (output.all === true) {
+    output.multiplier = 0;
+  }
+
+  return output;
+}
+
+/**
  * parseRawIntervals() builds an array of objects which in turn can
  * be used to build promises that trigger speech events.
  *
@@ -434,7 +492,7 @@ export const parseRawIntervals = (
   const post = (isObj(suffixes))
     ? suffixes
     : { first: ' gone', last: ' to go', half: 'Half way' };
-  const regex = /(?<=>^|\s)(?<allEvery>all|every)?[_-]?(?<multiplyer>[0-9]+)?[_-]?(?<firstLast>(?:la|fir)st)?[_-]?(?:(?<hmsNum>[1-9][0-9]*)[_-]?(?<hmsUnit>[smh]?)|(?<numerator>[1-9])?[_-]?1\/(?<denominator>[2-9]|10))(?=\s|$)/ig;
+  const regex = /(?<=>^|\s)(?<allEvery>all|every)?[_-]?(?<multiplyer>[0-9]+)?[_-]?(?<relative>(?:la|fir)st)?[_-]?(?:(?<hmsNum>[1-9][0-9]*)[_-]?(?<hmsUnit>[smh]?)|(?<numerator>[1-9])?[_-]?1\/(?<denominator>[2-9]|10))(?=\s|$)/ig;
   let matches;
   let timeIntervals = [];
   let fractionIntervals = [];
@@ -449,33 +507,7 @@ export const parseRawIntervals = (
 
   while ((matches = regex.exec(rawIntervals)) !== null) {
     const tmp = matches.groups;
-    const allEvery = (typeof tmp.allEvery !== 'undefined')
-      ? tmp.allEvery.toLocaleLowerCase()
-      : '';
-    const firstLast = (typeof tmp.firstLast !== 'undefined')
-      ? tmp.firstLast.toLocaleLowerCase()
-      : '';
-
-    const interval = {
-      all: (allEvery === 'all' || firstLast === ''),
-      every: (allEvery === 'every' && firstLast !== ''),
-      exclude: exclude,
-      isFraction: false,
-      multiplier: (typeof tmp.multiplyer !== 'undefined' && typeof (tmp.multiplyer * 1) === 'number')
-        ? Number.parseInt(tmp.multiplyer, 10)
-        : 1,
-      relative: firstLast,
-      raw: matches[0],
-      time: null,
-      unit: null,
-    };
-
-    if (interval.every === true) {
-      interval.all = false;
-      interval.multiplier = 0;
-    } else if (interval.all === true) {
-      interval.multiplier = 0;
-    }
+    const interval = intervalAdapter(matches, exclude);
 
     if (typeof tmp.denominator !== 'undefined') {
       // item is a fraction
