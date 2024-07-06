@@ -1,7 +1,12 @@
 import { LitElement, css, html } from 'lit';
-import { sayDataIsValid, validateTimeDuration } from '../utils/talking-timer.utils';
+import { getEpre, millisecondsToTimeObj, sayDataIsValid, validateTimeDuration } from '../utils/talking-timer.utils';
 import { filterOffsets, parseRawIntervals, sayDataAdapter, sortOffsets } from '../utils/interval-parser.utils';
-import './time-display';
+import {
+  getMainBtn,
+  getOtherBtn,
+  renderHumanTime,
+  stateError,
+} from './talking-timer.renderers';
 
 /**
  * An example element.
@@ -24,6 +29,21 @@ export class TalkingTimer extends LitElement {
     autoreset: { type: Number },
 
     /**
+     * The number of times the button has been clicked.
+     *
+     * * If `duration` is a number less than 10000 it will be assumed
+     *   to represent _seconds
+     * * If `duration` is a number greater than or equal to 10000 it
+     *   will be assumed to represent milliseconds
+     * * If `duration` is a string that can be matched by the pattern:
+     *   HH:MM:SS or MM:SS it will be converted to milliseconds
+     *   /^[0-9]{1,2}(?::[0-9]{2}(?::[0-9]{2})?)?$/
+     *
+     * @property {number|string} duration
+     */
+    duration: {},
+
+    /**
      * Heading to show at the top of the timer.
      *
      * [default: "Time's up"]
@@ -39,6 +59,20 @@ export class TalkingTimer extends LitElement {
      * @property {string} humanremaining
      */
     humanremaining: { type: String, reflect: true },
+
+    /**
+     * ID of set interval used for decrementing time
+     *
+     * @property {number} _intervalID
+     */
+    _intervalID: { type: Number, state: true },
+
+    /**
+     * Timestamp for the last time we decremented the time.
+     *
+     * @property {number} _lastTime
+     */
+    _lastTime: { type: Number, state: true },
 
     /**
      * Label for talking timer
@@ -79,6 +113,9 @@ export class TalkingTimer extends LitElement {
      */
     _milliseconds: { type: Number, state: true },
 
+    _nextTime: { type: Number, state: true },
+    _nextMsg: { type: String, state: true },
+
     /**
      * whether or not to play the end chime
      *
@@ -107,6 +144,16 @@ export class TalkingTimer extends LitElement {
     nosayend: { type: Boolean },
 
     /**
+     * Human readable parts of the time string
+     *
+     * @property {Object<{hours:number, _minutes: number, _seconds: number}}
+     */
+    _hours: { type: Number, state: true },
+    _minutes: { type: Number, state: true },
+    _seconds: { type: Number, state: true },
+    _tenths: { type: Number, state: true },
+
+    /**
      * The percentage of time remaining until timer ends
      *
      * `percent` is represented as a number between 1 & 0
@@ -126,12 +173,12 @@ export class TalkingTimer extends LitElement {
      * time.
      *
      * To reduce the amount of talking, announcements can only be
-     * made if they are seven seconds later or earlier than another
+     * made if they are seven _seconds later or earlier than another
      * anouncement. By default fraction anouncements have priority
-     * e.g. when the timer is set to 3 minutes, the "Half way"
+     * e.g. when the timer is set to 3 _minutes, the "Half way"
      * announcement is also the same as the "One minute, thirty
-     * seconds to go" anouncement so the "Half way" announcement
-     * is spoken but the "One minute, thirty seconds to go." is
+     * _seconds to go" anouncement so the "Half way" announcement
+     * is spoken but the "One minute, thirty _seconds to go." is
      * skipped.
      *
      * `priority` options:
@@ -163,6 +210,14 @@ export class TalkingTimer extends LitElement {
      * @property {number} remaining
      */
     remaining: { type: Number, reflect: true },
+
+    /**
+     * List of messages to announce
+     *
+     * @property {Array<{time: number, msg: string}>} _messages
+     */
+
+    _remainingLabel: { type: String, state: true },
 
     /**
      * A string that will be parsed to determin which intervals are
@@ -220,7 +275,7 @@ export class TalkingTimer extends LitElement {
     startmessage: { type: String },
 
     /**
-     * The number of seconds after which the talking timer will self
+     * The number of _seconds after which the talking timer will self
      * destruct (i.e. will be removed from the DOM)
      *
      * If `selfdestruct` is not a number or is less than zero, self
@@ -274,7 +329,7 @@ export class TalkingTimer extends LitElement {
      * The number of times the button has been clicked.
      *
      * * If `duration` is a number less than 10000 it will be assumed
-     *   to represent seconds
+     *   to represent _seconds
      * * If `duration` is a number greater than or equal to 10000 it
      *   will be assumed to represent milliseconds
      * * If `duration` is a string that can be matched by the pattern:
@@ -293,6 +348,10 @@ export class TalkingTimer extends LitElement {
     this.noendchime = false;
     this.nopause = false;
     this.nosayend = false;
+    this._hours = 0;
+    this._minutes = 0;
+    this._seconds = 0;
+    this._tenths = 0;
     this.priority = 'fraction'
     this.percent = 1;
     this.say = '1/2 30s last20 last15 allLast10';
@@ -306,6 +365,8 @@ export class TalkingTimer extends LitElement {
     // ----------------------------------------------------
     // START: non-reactive properties
 
+
+    this._decrementCB = this._getDecrementTimer(this);
     /**
      * List of messages to announce
      *
@@ -314,7 +375,7 @@ export class TalkingTimer extends LitElement {
      * @property {Array<{time: number, msg: string}>} _messages
      */
     this._messages = [];
-    this._ogMesseges = [];
+    this._ogMessages = [];
 
     /**
      * The next message to be spoke
@@ -343,26 +404,14 @@ export class TalkingTimer extends LitElement {
       last: ' to go',
       half: 'Half way',
     };
+    this._ePre = getEpre('talking-timer');
+    this._keyUp = this._getKeyUp(this);
 
     //  END:  non-reactive properties
     // ----------------------------------------------------
   }
 
-  getPauseResumeBtn() {
-    let txt = '';
-
-    if (this.state === 'running') {
-      txt = 'Pause';
-    } else if (this.state === 'paused') {
-      txt = 'Resume';
-    }
-
-    return (txt !== '')
-      ? html`<button .value="${txt}" @click=${this._btnClick}>${txt}</button>`
-      : '';
-  }
-
-  parseAttributes () {
+  _parseAttributes () {
     // ----------------------------------------------------
     // START: Process duration
 
@@ -372,6 +421,7 @@ export class TalkingTimer extends LitElement {
       throw new Error('<talking-timer> must have a duration to work with. `duration` was invalid');
     }
     this._total = tmp;
+    this.state = 'ready';
 
     //  END:  Process duration
     // ----------------------------------------------------
@@ -392,49 +442,215 @@ export class TalkingTimer extends LitElement {
       }
     }
 
+    this._resetData();
+
     //  END:  Message list
     // ----------------------------------------------------
 
     this.state = 'ready' ;
   }
 
-  connectedCallback() {
-    super.connectedCallback();
+  _btnClick(event) {
+    const { value } = event.target;
 
-    this.parseAttributes();
+    switch (value) {
+      case 'start':
+        this._startTimer();
+        break;
+
+      case 'pause':
+        this._pauseTimer();
+        break;
+
+      case 'resume':
+        this._resumeTimer();
+        break;
+
+      case 'restart':
+        this._restartTimer();
+        break;
+
+      case 'reset':
+        this._resetTimer();
+        break;
+    }
+    console.groupEnd();
   }
 
-  async startTimer() {
-    if (this.state !== 'ready' && this.state !== 'ended') {
-      throw new Error('')
+  _getDecrementTimer(context) {
+    return () => {
+      const now = Date.now();
+      const minus = now - context._lastTime;
+      context._lastTime = now;
+      context.remaining = (context.remaining - minus);
+
+      if (context.remaining <= 0) {
+        this._timerEnded();
+      }
+
+      context._setParts();
+
+      context.percent = (context.remaining > 0)
+        ? (Math.round((context.remaining / context._total) * 100000) / 1000)
+        : 0;
+
+
+      if (context._nextTime < now) {
+        // say message
+        this._getNextMsg();
+      }
+    };
+  }
+
+  _getNextMsg() {
+    const tmp = this._messages.shift();
+    if (typeof tmp !== 'undefined') {
+      this._nextTime = tmp.time;
+      this._nextMsg = tmp.message;
     }
+  }
+
+  _initInterval() {
+    if (this._intervalID === null) {
+      this._intervalID = setInterval(this._decrementCB, 50);
+    }
+  }
+
+  _getKeyUp(context) {
+    return (event) => {
+      // if (event.shiftKey === true) {
+      //   switch (event.key) {
+      //     case 'S':
+      //       event.preventDefault();
+      //       switch (context.state) {
+      //         case 'ready':
+      //           if (context.nopause !== true) {
+      //             context._startTimer();
+      //           }
+      //           break;
+      //         case 'running':
+      //           context._pauseTimer();
+      //           break;
+      //         case 'paused':
+      //           context._resumeTimer();
+      //           break;
+      //         case 'ended':
+      //           context._restartTimer();
+      //           break;
+      //       }
+      //       break;
+      //     case 'N':
+      //       switch (context.state) {
+      //         case 'paused':
+      //         case 'ended':
+      //           context._resetTimer();
+      //           break;
+      //       }
+
+      //     case 'R':
+      //       switch (context.state) {
+      //         case 'paused':
+      //         case 'ended':
+      //           context._restartTimer();
+      //           break;
+      //       }
+      //   }
+      // }
+      console.log('context:', context);
+
+      console.group(context._ePre('_keyUp'));
+      console.log('event:', event);
+
+      console.groupEnd();
+    }
+  }
+
+  _pauseTimer() {
+    if (this.state !== 'running') {
+      throw new Error(stateError('pause', 'running', this.state));
+    }
+    this._setState('paused');
+    clearInterval(this._intervalID);
+    this._intervalID = null;
+    this._decrementCB();
+  }
+
+  _resetData() {
+    this._messages = [...this._ogMessages];
+    this.remaining = this._total;
+    this.percent = 100;
+    this._setParts();
+  }
+
+  _resetTimer() {
+    if (this.state !== 'paused' && this.state !== 'ended') {
+      throw new Error(stateError('reset', 'paused" or "ended', this.state));
+    }
+    this._resetData();
+    this._setState('ready');
+  }
+
+  _restartTimer() {
+    if (this.state !== 'paused' && this.state !== 'ended') {
+      throw new Error(stateError('restart', 'paused', this.state));
+    }
+    this._resetData();
+    this._setState('running');
+    this._lastTime = Date.now();
+    this._initInterval();
+  }
+
+  _resumeTimer() {
+    if (this.state !== 'paused') {
+      throw new Error(stateError('resume', 'paused', this.state));
+    }
+    this._setState('running');
+    this._lastTime = Date.now();
+
+    this._initInterval();
+  }
+
+  _setParts() {
+    const tmp = millisecondsToTimeObj(this.remaining);
+    this._hours = tmp.hours;
+    this._minutes = tmp.minutes;
+    this._seconds = tmp.seconds;
+    this._tenths = tmp.tenths;
+  }
+
+  _setState(newState) {
+    if (this.state !== newState) {
+      this.state = newState;
+      this.dispatchEvent(
+        new Event('statechange', { bubbles: true, composed: true })
+      );
+    }
+  }
+
+  async _startTimer() {
+    if (this.state !== 'ready' && this.state !== 'ended') {
+      throw new Error(stateError('start', 'ready" or "endend', this.state));
+    }
+    this._setState('running');
+
     if (this.saystart === true) {
       // say the start bit.
     }
-    this._messages = [...this._ogMessages];
-    this.remaining = this._total;
-    this.percent = 1;
+
+    this._lastTime = Date.now();
+
+    this._initInterval();
+    this._getNextMsg();
   }
 
-  pauseTimer() {
-
-  }
-
-  resumeTimer() {
-
-  }
-
-  resetTimer() {
-    this._messages = [...this._ogMesseges];
-  }
-
-  timerEnded() {
+  _timerEnded() {
     if (this.state !== 'running') {
-      throw new Error('');
+      throw new Error(stateError('ended', 'running', this.state));
     }
-    const oldState = this.state;
-    this.state = 'ended';
-    this._emitStateChange(oldState);
+    this._setState('ended');
+    this.remaining = 0;
+    clearInterval(this._intervalID);
+    this._intervalID = null;
 
     if (this.nosayend !== true) {
       // say end bit
@@ -444,94 +660,49 @@ export class TalkingTimer extends LitElement {
     }
   }
 
-  _emitStateChange(oldState) {
-    if (oldState !== this.state) {
-      this.dispatchEvent('statechange');
-    }
+  connectedCallback() {
+    super.connectedCallback();
+
+    this._parseAttributes();
+    this.getRootNode().addEventListener('keyup', this._keyUp);
   }
 
-  _btnClick(event) {
-    const { value } = event.target;
-    const oldState = this.state;
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    this.getRootNode().removeEventListener('keyup', this._keyUp);
 
-    switch (value) {
-      case 'start':
-        if (this.state === 'ready') {
-          this.state = 'running';
-          this.startTimer();
-        } else {
-          throw new Error('cannot start timer because <talking-timer> is not ready');
-        }
-        break;
-
-      case 'Pause':
-        if (this.state === 'running') {
-          this.state = 'paused';
-          this.pauseTimer();
-        } else {
-          throw new Error('cannot pause timer because <talking-timer> is not running');
-        }
-        break;
-
-      case 'Resume':
-        if (this.state === 'paused') {
-          this.state = 'running';
-          this.resumeTimer();
-        } else {
-          throw new Error('cannot resume timer because <talking-timer> is not paused');
-        }
-        break;
-
-      case 'restart':
-          if (this.state === 'paused' || this.state === 'ended') {
-            this.state = 'running';
-            this.startTimer();
-          } else {
-            throw new Error('cannot resume timer because <talking-timer> is not paused and not ended');
-          }
-
-    }
-
-    this._emitStateChange(oldState);
   }
 
   render() {
     return html`
-      <div>
+      <div class="wrap" @keyup=${this._keyUp}>
         <header>
           <slot></slot>
         </header>
         <main>
           ${(this.state !== 'unset')
-            ? html`<time-display
-              hours=""
-              minutes="3"
-              seconds="0"
-              fraction="0"
-              .progress="${this.percent * 100}"
-              .label="${this.label}"></time-display>`
+            ? renderHumanTime(
+              this._hours,
+              this._minutes,
+              this._seconds,
+              this._tenths,
+              (100 - this.percent),
+              this.label,
+            )
             : ''
           }
         </main>
         <footer>
           ${(this.state === 'unset')
             ? html`<p>Not enough data</p>`
-            : ''
+            : getMainBtn(this.state, this._btnClick, this.nopause)
           }
-          ${(this.state === 'ready')
-            ? html`<button value="start" @click=${this._btnClick}>Start</button>`
-            : ''
-          }
-          ${(this.nopause === false)
-            ? this.getPauseResumeBtn()
+          ${(this.state === 'paused')
+            ? getOtherBtn('Restart', this._btnClick)
             : ''
           }
           ${(this.state === 'paused' || this.state === 'ended')
-            ? html`<button value="restart" @click=${this._btnClick}>Restart</button>`
-            : ''
-          }
-          ${(this.state === 'paused')
-            ? html`<button value="reset" @click=${this._btnClick}>Reset</button>`
+            ? getOtherBtn('Reset', this._btnClick)
             : ''
           }
         </footer>
@@ -541,28 +712,83 @@ export class TalkingTimer extends LitElement {
 
   static get styles() {
     return css`
-      div {
+      div.wrap {
         box-sizing: border-box;
         border: var(--tt-border, 0.05rem solid #000);
         display: flex;
         flex-direction: column;
+        font-family: arial, helvetica, sans-serif;
         justify-content: center;
+        min-width: 12.5rem;
         width: 100%;
 
       }
       footer {
         border-top: var(--tt-border, 0.05rem solid #000);
         display: flex;
+        gap: var(--tt-padding, 0.5rem);
         justify-content: center;
         padding: var(--tt-padding, 0.5rem);
       }
-      button {
+      .btn {
+        border-radius: var(--tt-btn-radius, 0);
+        border: var(--tt-border, 0.05rem solid #000);
         flex-grow: 1;
+        font-family: verdana, arial, helvetica, sans-serif;
+        font-weight: bold;
+        padding: 0.5rem;
+        text-transform: var(--tt-t-transform, uppercase);
+      }
+      .btn--start, .btn--resume {
+        background-color: var(--tt-btn-bg-colour, #030);
+      }
+      .btn--pause, .btn--restart {
+        background-color: var(--tt-btn-bg-colour, #004);
+      }
+      .btn--reset {
+        background-color: var(--tt-btn-bg-colour, #600);
       }
       main {
         padding: var(--tt-padding, 0.5rem);
       }
-    `
+
+      /* ------------------ */
+      div.human {
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+      }
+      div.human .whole {
+        align-items: center;
+        display: flex;
+        justify-content: center;
+        padding
+      }
+      div.human .whole--w-progress {
+        padding-bottom: 0.5rem;
+      }
+      div.human .num {
+        line-height: 4rem;
+        font-size: 4rem;
+      }
+      div.human .num--small {
+        align-self: flex-end;
+        font-size: 2rem;
+        line-height: 2.1rem;
+      }
+      div.human .colon {
+        font-size: 4rem;
+        line-height: 4rem;
+      }
+      div.human label {
+        display: none;
+        font-size: 0.875rem;
+        text-align: center;
+      }
+      div.human:focus-within label {
+        display: block;
+      }
+    `;
   }
 }
 
