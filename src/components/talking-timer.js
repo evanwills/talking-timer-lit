@@ -1,6 +1,7 @@
 import { LitElement, css, html } from 'lit';
 import { sayDataIsValid, validateTimeDuration } from '../utils/talking-timer.utils';
 import { filterOffsets, parseRawIntervals, sayDataAdapter, sortOffsets } from '../utils/interval-parser.utils';
+import './time-display';
 
 /**
  * An example element.
@@ -38,6 +39,13 @@ export class TalkingTimer extends LitElement {
      * @property {string} humanremaining
      */
     humanremaining: { type: String, reflect: true },
+
+    /**
+     * Label for talking timer
+     *
+     * @property {string} label
+     */
+    label: { type: String },
 
     /**
      * List of messages to announce
@@ -152,7 +160,7 @@ export class TalkingTimer extends LitElement {
      * >           Every time `_milliseconds` is updated, `remaining`
      * >           will be overwritten with the value from `_milliseconds`
      *
-     * @property {number} percent
+     * @property {number} remaining
      */
     remaining: { type: Number, reflect: true },
 
@@ -279,7 +287,7 @@ export class TalkingTimer extends LitElement {
   }
 
   constructor() {
-    super()
+    super();
     this.autoreset = -1;
     this.endmessage = "Time's up!";
     this.noendchime = false;
@@ -354,39 +362,6 @@ export class TalkingTimer extends LitElement {
       : '';
   }
 
-  render() {
-    return html`
-      <div>
-        <header>
-          <slot></slot>
-        </header>
-        <main>
-          <span>${this.humanremaining}</span>
-          <label for="remaining-progress">${this._remainingLabel}</label>
-          <progress type="progress" id="remaining-progress" .value=${(1 - this.percent)} />
-        </main>
-        <footer>
-          ${(this.state === 'unset')
-            ? html`<p>Not enough data</p>`
-            : ''
-          }
-          ${(this.state === 'ready')
-            ? html`<button value="start" @click=${this._btnClick}>Start</button>`
-            : ''
-          }
-          ${(this.nopause === false)
-            ? this.getPauseResumeBtn()
-            : ''
-          }
-          ${(this.state === 'paused' || this.state === 'ended')
-            ? html`<button value="restart" @click=${this._btnClick}>Restart</button>`
-            : ''
-          }
-        </footer>
-      </div>
-    `
-  }
-
   parseAttributes () {
     // ----------------------------------------------------
     // START: Process duration
@@ -437,7 +412,8 @@ export class TalkingTimer extends LitElement {
       // say the start bit.
     }
     this._messages = [...this._ogMessages];
-
+    this.remaining = this._total;
+    this.percent = 1;
   }
 
   pauseTimer() {
@@ -519,8 +495,73 @@ export class TalkingTimer extends LitElement {
     this._emitStateChange(oldState);
   }
 
+  render() {
+    return html`
+      <div>
+        <header>
+          <slot></slot>
+        </header>
+        <main>
+          ${(this.state !== 'unset')
+            ? html`<time-display
+              hours=""
+              minutes="3"
+              seconds="0"
+              fraction="0"
+              .progress="${this.percent * 100}"
+              .label="${this.label}"></time-display>`
+            : ''
+          }
+        </main>
+        <footer>
+          ${(this.state === 'unset')
+            ? html`<p>Not enough data</p>`
+            : ''
+          }
+          ${(this.state === 'ready')
+            ? html`<button value="start" @click=${this._btnClick}>Start</button>`
+            : ''
+          }
+          ${(this.nopause === false)
+            ? this.getPauseResumeBtn()
+            : ''
+          }
+          ${(this.state === 'paused' || this.state === 'ended')
+            ? html`<button value="restart" @click=${this._btnClick}>Restart</button>`
+            : ''
+          }
+          ${(this.state === 'paused')
+            ? html`<button value="reset" @click=${this._btnClick}>Reset</button>`
+            : ''
+          }
+        </footer>
+      </div>
+    `
+  }
+
   static get styles() {
     return css`
+      div {
+        box-sizing: border-box;
+        border: var(--tt-border, 0.05rem solid #000);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        width: 100%;
+
+      }
+      footer {
+        border-top: var(--tt-border, 0.05rem solid #000);
+        display: flex;
+        justify-content: center;
+        padding: var(--tt-padding, 0.5rem);
+      }
+      button {
+        flex-grow: 1;
+      }
+      main {
+        padding: var(--tt-padding, 0.5rem);
+      }
     `
   }
 }
