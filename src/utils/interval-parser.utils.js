@@ -471,6 +471,21 @@ const intervalAdapter = (matches, exclude) => {
   return output;
 }
 
+const parseFraction = (matches, interval, durationMilli, post) => {
+  // item is a fraction
+  const denominator = Number.parseInt(matches.denominator, 10);
+
+  interval.isFraction = true;
+  interval.denominator = denominator;
+
+  if (interval.multiplier > (denominator - 1)) {
+    interval.multiplier = (denominator - 1);
+  }
+
+  return getFractionOffsetAndMessage(interval, durationMilli, post);
+
+}
+
 /**
  * parseRawIntervals() builds an array of objects which in turn can
  * be used to build promises that trigger speech events.
@@ -492,7 +507,7 @@ export const parseRawIntervals = (
   const post = (isObj(suffixes))
     ? suffixes
     : { first: ' gone', last: ' to go', half: 'Half way' };
-  const regex = /(?<=>^|\s)(?<allEvery>all|every)?[_-]?(?<multiplyer>[0-9]+)?[_-]?(?<relative>(?:la|fir)st)?[_-]?(?:(?<hmsNum>[1-9][0-9]*)[_-]?(?<hmsUnit>[smh]?)|(?<numerator>[1-9])?[_-]?1\/(?<denominator>[2-9]|10))(?=\s|$)/ig;
+  const regex = /(?<=^|\s)(?<allEvery>all|every)?[_-]?(?<multiplyer>[0-9]+)?[_-]?(?<relative>(?:la|fir)st)?[_-]?(?:(?<hmsNum>[1-9][0-9]*)[_-]?(?<hmsUnit>[smh]?)|(?<numerator>[1-9])?[_-]?1\/(?<denominator>[2-9]|10))(?=\s|$)/ig;
   let matches;
   let timeIntervals = [];
   let fractionIntervals = [];
@@ -510,17 +525,7 @@ export const parseRawIntervals = (
     const interval = intervalAdapter(matches, exclude);
 
     if (typeof tmp.denominator !== 'undefined') {
-      // item is a fraction
-      const denominator = Number.parseInt(tmp.denominator, 10);
-
-      interval.isFraction = true;
-      interval.denominator = denominator;
-
-      if (interval.multiplier > (denominator - 1)) {
-        interval.multiplier = (denominator - 1);
-      }
-
-      const tmpIntervals = getFractionOffsetAndMessage(interval, durationMilli, post);
+      const tmpIntervals = parseFraction(tmp, interval, durationMilli, post);
 
       if (priority === 'order') {
         orderIntervals = orderIntervals.concat(tmpIntervals);
@@ -543,11 +548,19 @@ export const parseRawIntervals = (
     }
   }
 
-  const output = (priority === 'order')
-    ? orderIntervals
-    : (priority === 'time')
-      ? timeIntervals.concat(fractionIntervals)
-      : fractionIntervals.concat(timeIntervals);
+  let output = [];
+
+  switch (priority) {
+    case 'order':
+      output = orderIntervals;
+      break;
+    case 'time':
+      output = timeIntervals.concat(fractionIntervals);
+      break;
+
+    default:
+      output = fractionIntervals.concat(timeIntervals);
+  }
 
   return sortOffsets(filterOffsets(output, durationMilli));
 };
