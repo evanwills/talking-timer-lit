@@ -4,7 +4,7 @@ export const saySomething = (text, voiceSynth, voiceName) => {
   // const voiceName = 'English (Australia)';
 
   sayThis.volume = 1;
-  sayThis.rate = 1;
+  sayThis.rate = 1.25;
   sayThis.pitch = 1;
   sayThis.voice = voiceName;
 

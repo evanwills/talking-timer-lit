@@ -338,7 +338,7 @@ export class TalkingTimer extends LitElement {
     this.saydata = [];
     this.mergesaydata = false;
     this.nosaystart = false;
-    this.startmessage = 'ready, set, go';
+    this.startmessage = 'Ready, Set, Go';
     this.selfdestruct = -1;
     this.state = 'unset';
     this.voice = '';
@@ -631,7 +631,9 @@ export class TalkingTimer extends LitElement {
     const tmp = this._messages.shift();
 
     if (typeof tmp !== 'undefined') {
-      this._nextTime = tmp.offset;
+      // Make the announcement fire one second early to account for
+      // the delay in initialising the speech synthesizer
+      this._nextTime = (tmp.offset + 800);
       this._nextMsg = tmp.message;
     } else {
       this._nextTime = null;
