@@ -3,38 +3,41 @@ import { getEpre, millisecondsToTimeObj, validateTimeDuration } from '../utils/t
 import {
   filterOffsets,
   parseRawIntervals,
-  sayDataAdapter,
   sayDataIsValid,
   sortOffsets,
 } from '../utils/interval-parser.utils';
 import {
   getMainBtn,
   getOtherBtn,
-  renderHumanTime,
   stateError,
 } from './talking-timer.renderers';
 import { saySomething } from '../utils/speach.utils';
 import { playEndChime } from '../utils/sound.utils';
+import './time-display';
 
 /**
- * An example element.
+ * <talking-timer> is an
  *
- * @slot - This element has a slot
+ * @slot - Add your own heading content via the default slot
  * @csspart button - The button
  */
 export class TalkingTimer extends LitElement {
   static properties = {
+    // ==============================================================
+    // START: public attributes
+
     /**
      * Whether or not to auto reset the timer as soon
      *
      * If `autoreset` is not a number or is less than zero, auto
-     * restart is off.
+     * reset is off.
      *
      * [default: -1] (off)
      *
      * @property {string} autoreset
      */
     autoreset: { type: Number },
+    autostartafter: { type: Number },
 
     /**
      * The number of times the button has been clicked.
@@ -88,18 +91,6 @@ export class TalkingTimer extends LitElement {
     nomerge: { type: Boolean },
 
     /**
-     * The number of milliseconds remaining
-     *
-     * This is used to keep track of the number of milliseconds
-     * remaining. It's value is used to update the `remaining` value.
-     *
-     * It will be updated no more than once every tenth of a second
-     *
-     * @property {number} _milliseconds
-     */
-    _milliseconds: { type: Number, state: true },
-
-    /**
      * whether or not to play the end chime
      *
      * [default: false]
@@ -127,32 +118,13 @@ export class TalkingTimer extends LitElement {
     nosayend: { type: Boolean },
 
     /**
-     * The hours part of the human readable time string
+     * Whether or not to say the start phrase
      *
-     * @property {number|null}
-     */
-    _hours: { type: Number, state: true },
-
-    /**
-     * The minutes part of the human readable time string
+     * [default: false]
      *
-     * @property {number} _tenths
+     * @property {boolean} nosaystart
      */
-    _minutes: { type: Number, state: true },
-
-    /**
-     * The value for seconds remaining in the timer
-     *
-     * @property {number} _tenths
-     */
-    _seconds: { type: Number, state: true },
-
-    /**
-     * The value for tenths of a second remaining in the timer
-     *
-     * @property {number} _tenths
-     */
-    _tenths: { type: Number, state: true },
+    nosaystart: { type: Boolean },
 
     /**
      * The percentage of time remaining until timer ends
@@ -250,15 +222,6 @@ export class TalkingTimer extends LitElement {
     saydata: { type: Array },
 
     /**
-     * Whether or not to say the start phrase
-     *
-     * [default: false]
-     *
-     * @property {boolean} nosaystart
-     */
-    nosaystart: { type: Boolean },
-
-    /**
      * Message to say to indicate the timer is about to start
      *
      * [default: "Ready, set, go!"]
@@ -325,11 +288,59 @@ export class TalkingTimer extends LitElement {
      * @property {string} voice
      */
     voice: { type: String },
+
+    //  END:  public attributes
+    // ==============================================================
+    // START: private attributes
+
+    /**
+     * The hours part of the human readable time string
+     *
+     * @property {number|null}
+     */
+    _hours: { type: Number, state: true },
+
+    /**
+     * The number of milliseconds remaining
+     *
+     * This is used to keep track of the number of milliseconds
+     * remaining. It's value is used to update the `remaining` value.
+     *
+     * It will be updated no more than once every tenth of a second
+     *
+     * @property {number} _milliseconds
+     */
+    _milliseconds: { type: Number, state: true },
+
+    /**
+     * The minutes part of the human readable time string
+     *
+     * @property {number} _tenths
+     */
+    _minutes: { type: Number, state: true },
+
+    /**
+     * The value for seconds remaining in the timer
+     *
+     * @property {number} _tenths
+     */
+    _seconds: { type: Number, state: true },
+
+    /**
+     * The value for tenths of a second remaining in the timer
+     *
+     * @property {number} _tenths
+     */
+    _tenths: { type: Number, state: true },
+
+    //  END:  private attributes
+    // ==============================================================
   }
 
   constructor() {
     super();
     this.autoreset = -1;
+    this.autostartafter = -1;
     this.endmessage = "Your time is up!";
     this.noendchime = false;
     this.nopause = false;
@@ -353,6 +364,7 @@ export class TalkingTimer extends LitElement {
     // ----------------------------------------------------
     // START: non-reactive properties
 
+    this._autoStartID = null;
     // this._defaultVoice = 'English (Australia)';
     this._defaultVoice = 'Catherine, James, English (Australia), Zira';
 
@@ -475,8 +487,6 @@ export class TalkingTimer extends LitElement {
       );
     }
 
-    console.log('this._ogMessages:', this._ogMessages);
-
     this._resetData();
 
     //  END:  Message list
@@ -535,6 +545,15 @@ export class TalkingTimer extends LitElement {
     }
   }
 
+  _getFutureStart() {
+    return () => {
+      if (this.state === 'ready') {
+        this._resetData();
+        this._doStartup();
+      }
+    }
+  }
+
   _doEnding() {
     if (this.state !== 'running') {
       throw new Error(stateError('ended', 'running', this.state));
@@ -544,6 +563,7 @@ export class TalkingTimer extends LitElement {
     clearInterval(this._intervalID);
     this._intervalID = null;
     let voice = null;
+    let extra = 0;
 
     if (this.nosayend !== true && this.endmessage !== '') {
       // voice = this._saySomething(this.endmessage);
@@ -555,10 +575,21 @@ export class TalkingTimer extends LitElement {
       } else {
         playEndChime();
       }
+      extra = 5000;
+    }
+    if (this.autostartafter > -1) {
+      this._autoStartID = setTimeout(
+        this._getFutureStart(),
+        (this.autostartafter + extra),
+      );
     }
   }
 
   _doStartup() {
+    if (this._autoStartID !== null) {
+      clearTimeout(this._autoStartID);
+      this._autoStartID = null;
+    }
     if (this.nosaystart !== true) {
       // const voice = this._saySomething(this.startmessage, 1.25);
       const voice = saySomething(this.startmessage, this._voice, this._voiceName, 1.25);
@@ -572,6 +603,7 @@ export class TalkingTimer extends LitElement {
       this._lastTime = Date.now();
       this._initInterval(true);
     }
+    this._setState('running');
   }
 
   _getDecrementTimer(context) {
@@ -709,7 +741,6 @@ export class TalkingTimer extends LitElement {
       throw new Error(stateError('restart', 'paused', this.state));
     }
     this._resetData();
-    this._setState('running');
     this._doStartup();
   }
 
@@ -751,7 +782,6 @@ export class TalkingTimer extends LitElement {
     if (this.state !== 'ready' && this.state !== 'ended') {
       throw new Error(stateError('start', 'ready" or "endend', this.state));
     }
-    this._setState('running');
     this._doStartup();
   }
 
@@ -782,18 +812,17 @@ export class TalkingTimer extends LitElement {
     return html`
       <div class="wrap" @keyup=${this._keyUp}>
         <header>
-          <slot></slot>
+          <slot><h2>${this.label}</slot>
         </header>
         <main>
           ${(this.state !== 'unset')
-            ? renderHumanTime(
-              this._hours,
-              this._minutes,
-              this._seconds,
-              this._tenths,
-              (100 - this.percent),
-              this.label,
-            )
+            ? html`<time-display
+                .hours="${this._hours}"
+                .minutes="${this._minutes}"
+                .seconds="${this._seconds}"
+                .tenths="${this._tenths}"
+                .progress=${(100 - this.percent)}
+                .label="${this.label}"></time-display>`
             : ''
           }
         </main>
@@ -817,6 +846,7 @@ export class TalkingTimer extends LitElement {
 
   static get styles() {
     return css`
+
       div.wrap {
         box-sizing: border-box;
         border: var(--tt-border, 0.05rem solid #000);
@@ -825,6 +855,8 @@ export class TalkingTimer extends LitElement {
         font-family: arial, helvetica, sans-serif;
         justify-content: center;
         min-width: 12.5rem;
+        max-width: 18rem;
+        margin: 0 auto;
         width: 100%;
 
       }
@@ -839,7 +871,7 @@ export class TalkingTimer extends LitElement {
         border-radius: var(--tt-btn-radius, 0);
         border: var(--tt-border, 0.05rem solid #000);
         flex-grow: 1;
-        font-family: verdana, arial, helvetica, sans-serif;
+        font-family: var(--tt-btn-font, verdana, arial, helvetica, sans-serif);
         font-weight: bold;
         padding: 0.5rem;
         text-transform: var(--tt-t-transform, uppercase);
@@ -856,42 +888,14 @@ export class TalkingTimer extends LitElement {
       main {
         padding: var(--tt-padding, 0.5rem);
       }
-
-      /* ------------------ */
-      div.human {
-        box-sizing: border-box;
-        display: flex;
-        flex-direction: column;
-      }
-      div.human .whole {
-        align-items: center;
-        display: flex;
-        justify-content: center;
-        padding
-      }
-      div.human .whole--w-progress {
-        padding-bottom: 0.5rem;
-      }
-      div.human .num {
-        line-height: 4rem;
-        font-size: 4rem;
-      }
-      div.human .num--small {
-        align-self: flex-end;
-        font-size: 2rem;
-        line-height: 2.1rem;
-      }
-      div.human .colon {
-        font-size: 4rem;
-        line-height: 4rem;
-      }
-      div.human label {
-        display: none;
-        font-size: 0.875rem;
+      h2 {
+        padding: 0.5rem 0.5rem 0 0.5rem;
+        margin: 0;
+        font-weight: var(--tt-h-weight, normal);
+        font-size: var(--tt-h-size, 1.5rem);
+        font-family: var(--tt-h-font, verdana, arial, helvetica, sans-serif);
+        line-height: var(--tt-h-line-h, 1.5rem);
         text-align: center;
-      }
-      div.human:focus-within label {
-        display: block;
       }
     `;
   }

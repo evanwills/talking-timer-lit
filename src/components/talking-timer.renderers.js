@@ -1,80 +1,4 @@
 import { html } from 'lit';
-import { isNum, makeNullNum } from '../utils/general.utils';
-
-
-export const colon = (input, sep = ':') => {
-  const tmp = (sep === '.')
-    ? 'colon colon--point'
-    : 'colon';
-
-  return (input !== null)
-    ? html`<span class="${tmp}">${sep}</span>`
-    : ''
-};
-
-export const num = (input, small = false) => {
-  const tmp = (small === true)
-    ? 'num num--small'
-    : 'num'
-  return (input !== null)
-    ? html`<span class="${tmp}">${input}</span>`
-    : ''
-};
-
-export const  wholeClass = (progress) => {
-  return (progress !== null)
-    ? 'whole whole--w-progress'
-    : 'whole';
-};
-
-export const sanitiseTime = (hours, minutes, seconds, tenths, progress) => {
-  const output = { hours, minutes, seconds, tenths, progress };
-
-  output.hours = makeNullNum(output.hours);
-  output.minutes = makeNullNum(output.minutes, output.hours);
-  output.seconds = makeNullNum(output.seconds, output.minutes);
-  output.progress = isNum(output.progress)
-    ? output.progress
-    : null;
-
-  if (!isNum(output.tenths)) {
-    if (typeof output.tenths === 'string' && output.tenths.trim() !== '') {
-      output.tenths = parseInt(output.tenths.trim().substring(0,1), 10);
-    } else {
-      output.tenths = null;
-    }
-  }
-
-  return output;
-};
-
-export const renderHumanTime = (hours, minutes, seconds, tenths, progress, label) => {
-
-  const data = sanitiseTime(hours, minutes, seconds, tenths, progress);
-
-  return html`
-    <div class="human">
-      <span class="${wholeClass()}">
-        ${num(data.hours)}
-        ${colon(data.hours)}
-        ${num(data.minutes)}
-        ${colon(data.minutes)}
-        ${num(data.seconds)}
-        ${colon(data.tenths, '.')}
-        ${num(data.tenths, true)}
-      </span>
-      ${(data.progress !== null)
-        ? html`
-          <label for="tmpProg">
-            Time remaining
-            ${(label.trim() !== '') ? `for ${label}` : ''}
-          </label>
-          <progress id="tmpProg" max="100" .value="${data.progress}" tabindex="0">${data.progress}$</progress>`
-        : ''
-      }
-    </div>
-  `;
-};
 
 export const getMainBtn = (state, clicker, noPause) => {
   let txt = '';
@@ -136,3 +60,27 @@ export const stateError = (action, requireStates, state) => {
   return `Cannot ${action} timer because it is not in the `
    +`"${requireStates}" state. Current state: "${state}"`;
 };
+
+
+export const getSelect = (label, value, options, id, changer, s = 's') => html`
+  <li>
+    <div>
+      <label .for="${id}">${label}</label>
+      <select .id="${id}" @change=${changer}>
+        ${options.map((option) => html`<option value="${option.value}" ?selected=${(option.value === value)}>${option.label}${s}</option>`)}
+      </select>
+    </div>
+  </li>
+`;
+
+export const iWillBe = (time, intermission, repititions, cylinders) => {
+  const _type = (cylinders !== false)
+    ? 'cylendars'
+    : 'bowls';
+  return html`
+    <h2>I will be throwing ${repititions} ${time} ${_type} with maximum of ${intermission} break between each ${_type}</h2>
+    <ul>
+      <li>
+    </ul>
+  `
+}

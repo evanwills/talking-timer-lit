@@ -12,6 +12,16 @@ export const isObj = (input) => (Object.prototype.toString.call(input) === '[obj
 
 export const isNum = (input) => (typeof input === 'number' && !Number.isNaN(input) && Number.isFinite(input));
 
+export const makeInt = (input) => {
+  let tmp = input;
+  if (typeof tmp === 'string') {
+    tmp = parseInt(tmp, 10);
+  }
+  return (isNum(tmp))
+    ? tmp
+    : 0;
+};
+
 export const makeNullNum = (input, preceeding = null, max = 59) => {
   const t = typeof input;
   let output = input;
@@ -39,5 +49,18 @@ export const makeNullNum = (input, preceeding = null, max = 59) => {
   }
 
   return null;
+}
+
+export const getHumanOption = (options, value) => {
+  const tmp = options.find((option) => option.value === value);
+  return (typeof tmp !== 'undefined')
+    ? tmp.label
+    : '';
+};
+
+export const getSsTimerlabel = (type, count) => {
+  const label = type.substring(0,1).toUpperCase() + type.substring(1, (type.length - 1));
+
+  return `${label} number ${count}`;
 }
 
