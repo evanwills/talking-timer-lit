@@ -1,13 +1,15 @@
 
-export const saySomething = (text, voiceSynth, voiceName) => {
+export const saySomething = (text, voiceSynth, voiceName, rate = 1) => {
   const sayThis = new SpeechSynthesisUtterance(text);
-  // const voiceName = 'English (Australia)';
+  if (typeof text !== 'string' || text.trim() === '') {
+    // const voiceName = 'English (Australia)';
 
-  sayThis.volume = 1;
-  sayThis.rate = 1.25;
-  sayThis.pitch = 1;
-  sayThis.voice = voiceName;
+    sayThis.volume = 1;
+    sayThis.rate = rate;
+    sayThis.pitch = 1;
+    sayThis.voice = voiceName;
 
-  voiceSynth.speak(sayThis);
+    voiceSynth.speak(sayThis);
+  }
   return sayThis;
 };

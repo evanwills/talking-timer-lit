@@ -258,17 +258,3 @@ export const validateTimeDuration = (time) => {
   }
   return false;
 };
-
-export const sayDataIsValid = (data) => {
-  if (!Array.isArray(data) || data.length === 0) {
-    return false;
-  }
-
-  for (let a = 0; a < data.length; a += 1) {
-    if (!isObj(data[a]) || typeof data[a].offset !== 'number' || typeof data[a].message !== 'string')  {
-      return false;
-    }
-  }
-
-  return true;
-};

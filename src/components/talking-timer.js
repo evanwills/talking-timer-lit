@@ -1,6 +1,12 @@
 import { LitElement, css, html } from 'lit';
-import { getEpre, millisecondsToTimeObj, sayDataIsValid, validateTimeDuration } from '../utils/talking-timer.utils';
-import { filterOffsets, parseRawIntervals, sayDataAdapter, sortOffsets } from '../utils/interval-parser.utils';
+import { getEpre, millisecondsToTimeObj, validateTimeDuration } from '../utils/talking-timer.utils';
+import {
+  filterOffsets,
+  parseRawIntervals,
+  sayDataAdapter,
+  sayDataIsValid,
+  sortOffsets,
+} from '../utils/interval-parser.utils';
 import {
   getMainBtn,
   getOtherBtn,
@@ -77,9 +83,9 @@ export class TalkingTimer extends LitElement {
      *
      * [default: false]
      *
-     * @property {boolean} mergesaydata
+     * @property {boolean} nomerge
      */
-    mergesaydata: { type: Boolean },
+    nomerge: { type: Boolean },
 
     /**
      * The number of milliseconds remaining
@@ -336,7 +342,7 @@ export class TalkingTimer extends LitElement {
     this.percent = 1;
     this.say = '1/2 30s last20 last15 allLast10';
     this.saydata = [];
-    this.mergesaydata = false;
+    this.nomerge = false;
     this.nosaystart = false;
     this.startmessage = 'Ready, Set, Go';
     this.selfdestruct = -1;
@@ -424,6 +430,9 @@ export class TalkingTimer extends LitElement {
     this._keyUp = this._getKeyUp(this);
     this._voice = window.speechSynthesis;
     this._voiceName = null;
+    this._utterance = new SpeechSynthesisUtterance('');
+    this._utterance.volume = 1;
+    this._utterance.rate = 1;
 
 
     //  END:  non-reactive properties
@@ -447,27 +456,26 @@ export class TalkingTimer extends LitElement {
     // START: Message list
 
     const validSay = sayDataIsValid(this.saydata);
+    const sayIsNES = (typeof this.say === 'string' || this.say.trim() !== '')
 
-    if (this.mergesaydata !== true && validSay) {
-      this._ogMessages = sortOffsets(
-        filterOffsets(
-          sayDataAdapter(
-            this.saydata,
-          ),
-        ),
-      );
-    } else if (typeof this.say === 'string' || this.say.trim() === '') {
+    if ((this.nomerge === true || sayIsNES === false) && validSay !== false) {
+      this._ogMessages = validSay;
+    } else if (sayIsNES === true) {
       this._ogMessages = parseRawIntervals(this._total, this.say);
 
-      if (this.mergesaydata === true) {
-        this._ogMessages = sortOffsets(
-          filterOffsets([
-            ...this._ogMessages,
-            sayDataAdapter(this.saydata),
-          ]),
-        );
+      if (this.nomerge !== true || this._ogMessages.length === 0) {
+        this._ogMessages = this._ogMessages.concat(validSay);
       }
     }
+
+    if (Array.isArray(this._ogMessages) && this._ogMessages.length > 0) {
+      this._ogMessages = filterOffsets(
+        sortOffsets(this._ogMessages),
+        this._total,
+      );
+    }
+
+    console.log('this._ogMessages:', this._ogMessages);
 
     this._resetData();
 
@@ -494,7 +502,8 @@ export class TalkingTimer extends LitElement {
       this._voiceName = this._getVoiceName(this._defaultVoice);
     }
 
-    if (this._voiceName === null) {
+    if (this._voiceName !== null) {
+      this._utterance.voice = this._voiceName;
     }
     //  END:  Get speech voice
     // ----------------------------------------------------
@@ -537,6 +546,7 @@ export class TalkingTimer extends LitElement {
     let voice = null;
 
     if (this.nosayend !== true && this.endmessage !== '') {
+      // voice = this._saySomething(this.endmessage);
       voice = saySomething(this.endmessage, this._voice, this._voiceName);
     }
     if (this.noendchime !== true) {
@@ -550,7 +560,8 @@ export class TalkingTimer extends LitElement {
 
   _doStartup() {
     if (this.nosaystart !== true) {
-      const voice = saySomething(this.startmessage, this._voice, this._voiceName);
+      // const voice = this._saySomething(this.startmessage, 1.25);
+      const voice = saySomething(this.startmessage, this._voice, this._voiceName, 1.25);
 
       const startTimer = (context) => () => {
         this._lastTime = Date.now();
@@ -712,6 +723,13 @@ export class TalkingTimer extends LitElement {
     this._initInterval();
   }
 
+  _saySomething(text, rate = 1) {
+    this._utterance.text = text;
+    this._utterance.rate = rate;
+    this._voice.speak(this._utterance);
+    return this._utterance;
+  }
+
   _setParts() {
     const tmp = millisecondsToTimeObj(this.remaining);
     this._hours = tmp.hours;
@@ -740,6 +758,7 @@ export class TalkingTimer extends LitElement {
   _tryToSayNext() {
     if (this._nextTime === null || this._nextTime > this.remaining) {
       if (this._nextMsg !== null) {
+        // this._saySomething(this._nextMsg);
         saySomething(this._nextMsg, this._voice, this._voiceName);
       }
       this._getNextMsg();

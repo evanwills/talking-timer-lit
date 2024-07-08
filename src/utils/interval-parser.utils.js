@@ -343,8 +343,8 @@ export const getTimeOffsetAndMessage = (
     ? interval
     : (milliseconds - interval);
   return [{
-    message: makeTimeMessage(interval, suffix),
     offset: offset,
+    message: makeTimeMessage(interval, suffix),
     // raw: intervalObj.raw,
   }];
 };
@@ -402,13 +402,13 @@ export const getFractionOffsetAndMessage = (
     for (let a = 1; a <= (count / 2); a += 1) {
       const message = makeFractionMessage(a, intervalObj.denominator);
       offsets.push({
-        message: message + suffixes.last,
         offset: (milliseconds - (interval * a)),
+        message: message + suffixes.last,
         // raw: intervalObj.raw,
       },
       {
-        message: message + suffixes.first,
         offset: (interval * a),
+        message: message + suffixes.first,
         // raw: intervalObj.raw,
       });
     }
@@ -417,8 +417,8 @@ export const getFractionOffsetAndMessage = (
   const filtered = offsets.map(item => {
     if (tooClose(item.offset, half)) {
       return {
-        message: suffixes.half,
         offset: half,
+        message: suffixes.half,
         // raw: item.raw,
       };
     } else {
@@ -563,4 +563,26 @@ export const parseRawIntervals = (
   }
 
   return sortOffsets(filterOffsets(output, durationMilli));
+};
+
+export const sayDataIsValid = (data) => {
+  let _data = data;
+  if (typeof data === 'string') {
+    try {
+      _data = JSON.parse(data);
+    } catch (e) {
+      return false;
+    }
+  }
+  if (!Array.isArray(_data) || _data.length === 0) {
+    return false;
+  }
+
+  for (let a = 0; a < _data.length; a += 1) {
+    if (!isObj(_data[a]) || typeof _data[a].offset !== 'number' || typeof _data[a].message !== 'string')  {
+      return false;
+    }
+  }
+
+  return sayDataAdapter(_data);
 };
