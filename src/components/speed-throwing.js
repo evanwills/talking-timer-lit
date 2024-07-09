@@ -131,6 +131,7 @@ export class SpeedThrowing extends LitElement {
       },
     ];
     this._timer = null;
+    this._breakID = null;
   }
 
   _getTimer(context) {
@@ -157,8 +158,11 @@ export class SpeedThrowing extends LitElement {
     console.log('event.target.id:', event.target.id);
     console.log('event.target.state:', event.target.state);
     switch (event.target.state) {
+      case 'ending':
+        break;
+
       case 'ended':
-      break;
+        break;
 
       case 'running':
         this._started = true;
@@ -303,7 +307,6 @@ export class SpeedThrowing extends LitElement {
           ? html`<talking-timer
               id="speed-throwing-timer"
               .autoreset="${Math.round(this._intermission / 10)}"
-              .autostartafter="${(this._started === true) ? this._intermission : -1}"
               .duration="${this._duration}"
               endmessage="Hands off your pots"
               .label="${getSsTimerlabel(this._type, this._repCount)}"

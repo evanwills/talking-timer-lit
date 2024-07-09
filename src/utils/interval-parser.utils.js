@@ -221,18 +221,28 @@ const getNonRelativeMsgs = (intervalObj, milliseconds, suffixes) => {
   const output = [];
 
   for (let offset = interval; offset <= half; offset += interval) {
-    output.push({
-      message: makeTimeMessage(offset, suffixes.last),
-      offset,
-      // raw: intervalObj.raw,
-    }, {
-      message: makeTimeMessage(offset, suffixes.first),
-      offset: milliseconds - offset,
-      // raw: intervalObj.raw,
-    });
+    output.push(
+      sayItemAdapter({
+        offset,
+        message: makeTimeMessage(offset, suffixes.last),
+        // raw: intervalObj.raw,
+      }),
+      sayItemAdapter({
+        offset: milliseconds - offset,
+        message: makeTimeMessage(offset, suffixes.first),
+        // raw: intervalObj.raw,
+      }),
+    );
   }
 
   return output;
+};
+
+const getRate = (msg) => {
+  const regex = /^1?[0-9]$/;
+  return regex.test(msg)
+    ? 1.5
+    : 1;
 };
 
 const getRelativeMsgs = (intervalObj, milliseconds, suffix) => {
@@ -253,19 +263,25 @@ const getRelativeMsgs = (intervalObj, milliseconds, suffix) => {
 
   for (let a = count; a > 0; a -= 1) {
     const offset = a * interval;
-    output.push({
-      message: makeTimeMessage(offset, suffix, forceSufix),
-      offset: posMinus(modifier, offset),
-      // raw: intervalObj.raw,
-    });
+    output.push(
+      sayItemAdapter({
+        message: makeTimeMessage(offset, suffix, forceSufix),
+        offset: posMinus(modifier, offset),
+        // raw: intervalObj.raw,
+      }),
+    );
   }
 
   return output;
 };
 
-export const sayDataAdapter = (data) => data.map(
-  item => ({ offset: item.offset, message: item.message }),
-);
+export const sayItemAdapter = (item) => ({
+  offset: item.offset,
+  message: item.message,
+  rate: getRate(item.message),
+});
+
+export const sayListAdapter = (data) => data.map(sayItemAdapter);
 
 /**
  * Get a list of interval messages based on a multiplier
@@ -287,11 +303,13 @@ const getMultiplierMsgs = (intervalObj, milliseconds, suffix) => {
     : milliseconds
 
   for (let offset = interval; offset <= intervalObj.time; offset += interval) {
-    output.push({
-      message: makeTimeMessage(offset, suffix),
-      offset: posMinus(modifier, offset),
-      // raw: intervalObj.raw,
-    });
+    output.push(
+      sayItemAdapter({
+        offset: posMinus(modifier, offset),
+        message: makeTimeMessage(offset, suffix),
+        // raw: intervalObj.raw,
+      }),
+    );
   }
 
   return output;
@@ -342,11 +360,13 @@ export const getTimeOffsetAndMessage = (
   const offset = (intervalObj.relative !== 'first')
     ? interval
     : (milliseconds - interval);
-  return [{
-    offset: offset,
-    message: makeTimeMessage(interval, suffix),
-    // raw: intervalObj.raw,
-  }];
+  return [
+    sayItemAdapter({
+      offset: offset,
+      message: makeTimeMessage(interval, suffix),
+      // raw: intervalObj.raw,
+    }),
+  ];
 };
 
 /**
@@ -392,25 +412,29 @@ export const getFractionOffsetAndMessage = (
       : 0;
 
     for (let a = 1; a <= count; a += 1) {
-      offsets.push({
-        offset: posMinus(minus, (interval * a)),
-        message: makeFractionMessage(a, intervalObj.denominator) + suffix,
-        // raw: intervalObj.raw,
-      });
+      offsets.push(
+        sayItemAdapter({
+          offset: posMinus(minus, (interval * a)),
+          message: makeFractionMessage(a, intervalObj.denominator) + suffix,
+          // raw: intervalObj.raw,
+        }),
+      );
     }
   } else {
     for (let a = 1; a <= (count / 2); a += 1) {
       const message = makeFractionMessage(a, intervalObj.denominator);
-      offsets.push({
-        offset: (milliseconds - (interval * a)),
-        message: message + suffixes.last,
-        // raw: intervalObj.raw,
-      },
-      {
-        offset: (interval * a),
-        message: message + suffixes.first,
-        // raw: intervalObj.raw,
-      });
+      offsets.push(
+        sayItemAdapter({
+          offset: (milliseconds - (interval * a)),
+          message: message + suffixes.last,
+          // raw: intervalObj.raw,
+        }),
+        sayItemAdapter({
+          offset: (interval * a),
+          message: message + suffixes.first,
+          // raw: intervalObj.raw,
+        }),
+      );
     }
   }
 
@@ -584,5 +608,5 @@ export const sayDataIsValid = (data) => {
     }
   }
 
-  return sayDataAdapter(_data);
+  return sayListAdapter(_data);
 };

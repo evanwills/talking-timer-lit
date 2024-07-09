@@ -46,18 +46,18 @@ export class TimeDisplay extends LitElement {
       : ''
   }
 
-  alwaysShow(key, current, previous = null) {
+  alwaysShow(key, current, previous = null, len = 2) {
     let val = current;
 
     if (previous === null && (val === null || val === 0) && this.always.includes(key.substring(0, 1)) === false) {
       return null;
     }
 
-    val = val.toString().substring(0, 2);
+    val = val.toString().substring(0, len);
 
     return (previous === null)
       ? val
-      : val.padStart(2, '0');
+      : val.padStart(len, '0');
   }
 
   showNum(input, previous = null, small = false, sep = ':') {
@@ -71,19 +71,11 @@ export class TimeDisplay extends LitElement {
   }
 
   render() {
-    console.group(this._ePre('render'));
-    console.log('this.milliseconds:', this.milliseconds);
     const tmp = millisecondsToTimeObj(this.milliseconds);
     const hours = this.alwaysShow('hours', tmp.hours);
     const minutes = this.alwaysShow('minutes', tmp.minutes, hours);
     const seconds = this.alwaysShow('seconds', tmp.seconds, minutes);
-    const tenths = this.alwaysShow('tenths', tmp.tenths, seconds);
-    console.log('tmp:', tmp);
-    console.log('hours:', hours);
-    console.log('minutes:', minutes);
-    console.log('seconds:', seconds);
-    console.log('tenths:', tenths);
-    console.groupEnd();
+    const tenths = this.alwaysShow('tenths', tmp.tenths, seconds, 1);
 
     return html`
       <div class="human">

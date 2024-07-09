@@ -13,6 +13,7 @@ import {
 } from './talking-timer.renderers';
 import { saySomething } from '../utils/speach.utils';
 import { playEndChime } from '../utils/sound.utils';
+// import playEndChime from '../utils/play-tone';
 import './time-display';
 
 /**
@@ -248,7 +249,9 @@ export class TalkingTimer extends LitElement {
      * * `ready`   - Timer is set but has not yet started
      * * `running` - Timer is counting down
      * * `paused`  - Timer has started but is currently paused
-     * * `ended`   - Timer has finished counting down
+     * * `ending`  - Timer has finished counting down but there are
+     *               still a message to say and/or a chime to sound
+     * * `ended`   - Timer has (completely) finished counting down
      *
      * [default: "unset"]
      *
@@ -363,6 +366,14 @@ export class TalkingTimer extends LitElement {
      * @property {number} _nextTime
      */
     this._nextTime = null;
+
+    /**
+     * Number of milliseconds remaining when the next message will
+     * be spoken
+     *
+     * @property {number} _nextTime
+     */
+    this._nextRate = null;
 
     /**
      * The (original) list of messages to announce.
@@ -592,30 +603,52 @@ export class TalkingTimer extends LitElement {
     if (this.state !== 'running') {
       throw new Error(stateError('ended', 'running', this.state));
     }
-    this._setState('ended');
+    const noExtra = (this.noendchime === true && this.nosayend === true);
+
+    this._setState((noExtra === false) ? 'ending' : 'ended');
+
     this.remaining = 0;
     clearInterval(this._intervalID);
     this._intervalID = null;
     let voice = null;
     let extra = 0;
 
-    if (this.nosayend !== true && this.endmessage !== '') {
-      // voice = this._saySomething(this.endmessage);
-      voice = saySomething(this.endmessage, this._voice, this._voiceName);
+    if (noExtra === true) {
+      return;
     }
+
+    const emitEnded = (context) => () => {
+      context._setState('ended');
+
+      if (context.autostartafter > -1) {
+        context._autoStartID = setTimeout(
+          context._getFutureStart(),
+          (context.autostartafter + extra),
+        );
+      }
+    };
+
+    const playChimeLater = (context) => () => {
+      const delay = playEndChime();
+
+      setTimeout(emitEnded(context), delay);
+    };
+
+    if (this.nosayend !== true && this.endmessage !== '') {
+      voice = saySomething(this.endmessage, this._voice, this._voiceName);
+
+      if (this.noendchime === true) {
+        voice.addEventListener('end', emitEnded(this));
+        return;
+      }
+    }
+
     if (this.noendchime !== true) {
       if (voice !== null) {
-        voice.addEventListener('end', playEndChime);
+        voice.addEventListener('end', playChimeLater(this));
       } else {
-        playEndChime();
+        playChimeLater(this)();
       }
-      extra = 5000;
-    }
-    if (this.autostartafter > -1) {
-      this._autoStartID = setTimeout(
-        this._getFutureStart(),
-        (this.autostartafter + extra),
-      );
     }
   }
 
@@ -625,19 +658,21 @@ export class TalkingTimer extends LitElement {
       this._autoStartID = null;
     }
     if (this.nosaystart !== true) {
+      this._setState('starting');
       // const voice = this._saySomething(this.startmessage, 1.25);
       const voice = saySomething(this.startmessage, this._voice, this._voiceName, 1.25);
 
       const startTimer = (context) => () => {
         this._lastTime = Date.now();
         context._initInterval(true);
+        this._setState('running');
       };
       voice.addEventListener('end', startTimer(this));
     } else {
       this._lastTime = Date.now();
       this._initInterval(true);
+      this._setState('running');
     }
-    this._setState('running');
   }
 
   _getDecrementTimer(context) {
@@ -723,9 +758,13 @@ export class TalkingTimer extends LitElement {
       // the delay in initialising the speech synthesizer
       this._nextTime = (tmp.offset + 800);
       this._nextMsg = tmp.message;
+      this._nextRate = (typeof tmp.rate === 'number')
+        ? tmp.rate
+        : 1;
     } else {
       this._nextTime = null;
       this._nextMsg = null;
+      this._nextRate = null;
     }
   }
 
@@ -825,7 +864,7 @@ export class TalkingTimer extends LitElement {
     if (this._nextTime === null || this._nextTime > this.remaining) {
       if (this._nextMsg !== null) {
         // this._saySomething(this._nextMsg);
-        saySomething(this._nextMsg, this._voice, this._voiceName);
+        saySomething(this._nextMsg, this._voice, this._voiceName, this._nextRate);
       }
       this._getNextMsg();
     }
@@ -888,7 +927,6 @@ export class TalkingTimer extends LitElement {
 
   static get styles() {
     return css`
-
       div.wrap {
         box-sizing: border-box;
         border: var(--tt-border, 0.05rem solid #000);
@@ -907,6 +945,7 @@ export class TalkingTimer extends LitElement {
         display: flex;
         gap: var(--tt-padding, 0.5rem);
         justify-content: center;
+        min-height: 2.125rem;
         padding: var(--tt-padding, 0.5rem);
       }
       .btn {
