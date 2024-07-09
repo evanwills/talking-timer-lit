@@ -1,10 +1,19 @@
 import { LitElement, css, html } from 'lit';
+import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { getEpre, millisecondsToTimeObj, timeObjToString } from '../utils/talking-timer.utils';
-import { getSelect } from './talking-timer.renderers';
-import { getHumanOption, getSsTimerlabel, makeInt } from '../utils/general.utils';
+import { getRadio, getSelect } from './talking-timer.renderers';
+import { getHumanOption, getLocalValue, getSsTimerlabel, makeInt, setLocalValue } from '../utils/general.utils';
 import './talking-timer';
 
 const timerOptions = [
+  {
+    label: '30 second',
+    value: 30000,
+  },
+  {
+    label: '60 second',
+    value: 60000,
+  },
   {
     label: '90 second',
     value: 90000,
@@ -14,16 +23,48 @@ const timerOptions = [
     value: 120000,
   },
   {
+    label: '2.5 minute',
+    value: 150000,
+  },
+  {
     label: '3 minute',
     value: 180000,
+  },
+  {
+    label: '3.5 minute',
+    value: 210000,
   },
   {
     label: '4 minute',
     value: 240000,
   },
   {
+    label: '4.5 minute',
+    value: 270000,
+  },
+  {
     label: '5 minute',
     value: 3000000,
+  },
+  {
+    label: '6 minute',
+    value: 360000,
+  },
+  {
+    label: '7 minute',
+    value: 420000,
+  },
+  {
+    label: '8 minute',
+    value: 4800000,
+  },
+  {
+    label: '9 minute',
+    value: 5400000,
+  },
+  {
+    label: '10 minute',
+    value: 6000000,
   },
 ];
 const endCentering = 'You should be finishing centering and opening up';
@@ -46,9 +87,9 @@ for (let a = 1; a <= 10; a += 1) {
 export class SpeedThrowing extends LitElement {
   static properties = {
     _duration: { type: Number, state: true },
-    _repititions: { type: Number, state: true },
+    _repetitions: { type: Number, state: true },
     _repCount: { type: Number, state: true },
-    _doCylindars: { type: Boolean, state: true },
+    _doCylinders: { type: Boolean, state: true },
     _intermission: { type: Number, state: true },
     _timerState: { type: String, state: true },
     _confirmed: { type: Boolean, state: true },
@@ -60,17 +101,22 @@ export class SpeedThrowing extends LitElement {
   constructor() {
     super();
 
-    this._duration = '3:00';
-    this._repititions = 5;
+    this._repetitions = getLocalValue('st-repetitions', 5, 'int');
+    this._doCylinders = getLocalValue('st-cylinders', true, 'bool');
+    this._intermission = getLocalValue('st-intermission', 120000, 'int');
+    this._confirmed = getLocalValue('st-confirmed', false, 'bool');
+    console.log('this._confirmed:', this._confirmed);
+    this._totalMilli = getLocalValue('st-time', 180000, 'int');
+    this._duration = timeObjToString(millisecondsToTimeObj(this._totalMilli));
+    this._type = (this._doCylinders === true)
+      ? 'cylinders'
+      : 'bowls';
     this._repCount = 1;
-    this._doCylindars = true;
-    this._timerState = 'unset';
-    this._intermission = 120000;
-    this._confirmed = false;
-    this._totalMilli = 180000;
-    this._type = 'cylinders';
-    this._state = ''
+    this._state = (this._confirmed === true)
+      ? 'ready'
+      : '';
     this._started = false;
+    this._timerState = 'unset';
 
     this._dialogue = null;
     this._ePre = getEpre('speed-throwing');
@@ -122,7 +168,10 @@ export class SpeedThrowing extends LitElement {
   }
 
   _handleChange(event) {
+    console.group(this._ePre('_handleChange'));
     const val = event.target.value;
+    console.log('val:', val);
+
 
     switch (event.target.id.substring(3)) {
       case 'confirm':
@@ -139,6 +188,11 @@ export class SpeedThrowing extends LitElement {
             message: endOpening,
           },
         ];
+        setLocalValue('st-confirmed', this._confirmed);
+        setLocalValue('st-cylinders', this._doCylinders);
+        setLocalValue('st-intermission', this._intermission);
+        setLocalValue('st-time', this._totalMilli);
+        setLocalValue('st-repetitions', this._repetitions);
         setTimeout(this._getTimer(this), 1);
         break;
       case 'start':
@@ -156,12 +210,23 @@ export class SpeedThrowing extends LitElement {
         this._duration = timeObjToString(millisecondsToTimeObj(this._totalMilli));
         break;
       case 'intermission':
-        this.__intermission = makeInt(val);
+        this._intermission = makeInt(val);
         break;
       case 'repetitions':
         this._repetitions = makeInt(val);
         break;
+
+      case 'type--cylinders':
+        this._doCylinders = true;
+        this._type = val;
+        break;
+
+      case 'type--bowls':
+        this._doCylinders = true;
+        this._type = val;
+        break;
     }
+    console.groupEnd();
   }
 
   connectedCallback() {
@@ -177,7 +242,7 @@ export class SpeedThrowing extends LitElement {
           if (a > 0) {
             setTimeout(cb(context), 1 );
           }
-        } else {
+        } else if (context._confirmed === false) {
           context._dialogue.showModal();
         }
       }
@@ -188,10 +253,10 @@ export class SpeedThrowing extends LitElement {
   iWillBe() {
     return html`
       <p>
-        I will be throwing ${this._repititions},
-        ${getHumanOption(timerOptions, this._totalMilli)}
-        ${this._type}, with maximum of
-        ${getHumanOption(timerOptions, this._intermission)}s
+        I will be throwing <span class="i-will--count">${this._repetitions}</span>,
+        <span class="i-will--time">${unsafeHTML(getHumanOption(timerOptions, this._totalMilli))}</span>
+        <span class="i-will--type">${this._type}</span>, with maximum of
+        <span class="i-will--break">${unsafeHTML(getHumanOption(timerOptions, this._intermission))}s</span>
         break between each ${this._type.substring(0, this._type.length - 1)}.
       </p>
     `;
@@ -210,46 +275,24 @@ export class SpeedThrowing extends LitElement {
                     What are you throwing?
                   </span>
                   <ul class="radio">
-                    <li>
-                      <label id="ss-type--cylinders">
-                        <input
-                          class="hidden"
-                          type="radio"
-                          name="ss-type-radio"
-                          value="cylinders"
-                          ?checked=${this._doCylindars}
-                          @change=${this._handleChange} />
-                        Cylinders
-                      </label>
-                    </li>
-                    <li>
-                      <label id="ss-type--bowls">
-                        <input
-                          class="hidden"
-                          type="radio"
-                          name="ss-type-radio"
-                          value="bowls"
-                          ?checked=${!this._doCylindars}
-                          @change=${this._handleChange} />
-                        Bowls
-                      </label>
-                    </li>
+                    ${getRadio('Cylinders', this._doCylinders, this._handleChange)}
+                    ${getRadio('Bowls', !this._doCylinders, this._handleChange)}
                   </ul>
                 </div>
               </li>
+              ${getSelect(`Number of ${this._type}`, this._repetitions, reps, 'ss-repetitions', this._handleChange, '')}
               ${getSelect('Throwing time', this._totalMilli, timerOptions, 'ss-duration', this._handleChange)}
               ${getSelect(`Break between ${this._type}`, this._intermission, timerOptions, 'ss-intermission', this._handleChange)}
-              ${getSelect(`Number of ${this._type}`, this._repititions, reps, 'ss-repetitions', this._handleChange, '')}
             </ul>
             ${this.iWillBe()}
-            <button type="button" value="confirm" id="ss-confirm" @click=${this._handleChange}>Confirm</button>
+            <button type="button" value="confirm" id="ss-confirm" @click=${this._handleChange}>Save settings</button>
           </div>
         </dialog>
 
         ${(this._confirmed === true) ? this.iWillBe() : ''}
 
         ${(this._state !== 'running')
-          ? html`<p><button type="button" value="config" id="ss-config" @click=${this._handleChange}>Configure</button></p>`
+          ? html`<p><button type="button" value="config" id="ss-config" @click=${this._handleChange}>Change settings</button></p>`
           : ''}
 
         ${(this._confirmed === true)
@@ -356,6 +399,23 @@ export class SpeedThrowing extends LitElement {
         position: absolute !important;
         white-space: nowrap !important;
         width: 1px !important;
+      }
+      .i-will--count {
+        font-weight: bold;
+        font-size: 0.95rem;
+        font-family: var(--tt-btn-font, verdana, arial, helvetica, sans-serif);
+      }
+      .i-will--type {
+        font-weight: bold;
+        font-size: 0.95rem;
+        font-family: var(--tt-btn-font, verdana, arial, helvetica, sans-serif);
+      }
+      .i-will--time {
+        font-weight: bold;
+        font-style: italic;
+      }
+      .i-will--break {
+        font-weight: bold;
       }
     `;
   }

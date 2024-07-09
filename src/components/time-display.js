@@ -1,5 +1,5 @@
 import { LitElement, css, html } from 'lit';
-import { getEpre } from '../utils/talking-timer.utils';
+import { getEpre, millisecondsToTimeObj } from '../utils/talking-timer.utils';
 /**
  * An example element.
  *
@@ -9,19 +9,13 @@ import { getEpre } from '../utils/talking-timer.utils';
 export class TimeDisplay extends LitElement {
   static properties = {
     always: { type: String },
-    hours: { type: Number },
+    milliseconds: { type: Number },
     label: { type: String },
-    minutes: { type: Number },
     progress: { type: Number },
-    seconds: { type: Number },
-    tenths: { type: Number },
   }
   constructor() {
     super();
-    this.hours = null;
-    this.minutes = null;
-    this.seconds = null;
-    this.tenths = null;
+    this.milliseconds = null;
     this.progress = null;
     this.label = '';
     this.always = 'mst';
@@ -52,8 +46,8 @@ export class TimeDisplay extends LitElement {
       : ''
   }
 
-  alwaysShow(key, previous = null) {
-    let val = this[key];
+  alwaysShow(key, current, previous = null) {
+    let val = current;
 
     if (previous === null && (val === null || val === 0) && this.always.includes(key.substring(0, 1)) === false) {
       return null;
@@ -77,10 +71,11 @@ export class TimeDisplay extends LitElement {
   }
 
   render() {
-    const hours = this.alwaysShow('hours');
-    const minutes = this.alwaysShow('minutes', hours);
-    const seconds = this.alwaysShow('seconds', minutes);
-    const tenths = this.alwaysShow('tenths', seconds);
+    const tmp = millisecondsToTimeObj(this.milliseconds);
+    const hours = this.alwaysShow('hours', tmp.hours);
+    const minutes = this.alwaysShow('minutes', tmp.minutes, hours);
+    const seconds = this.alwaysShow('seconds', tmp.seconds, minutes);
+    const tenths = this.alwaysShow('tenths', tmp.tenths, seconds);
     console.log()
 
     return html`

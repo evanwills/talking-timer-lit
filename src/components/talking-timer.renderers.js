@@ -1,4 +1,5 @@
 import { html } from 'lit';
+import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 
 export const getMainBtn = (state, clicker, noPause) => {
   let txt = '';
@@ -67,20 +68,26 @@ export const getSelect = (label, value, options, id, changer, s = 's') => html`
     <div>
       <label .for="${id}">${label}</label>
       <select .id="${id}" @change=${changer}>
-        ${options.map((option) => html`<option value="${option.value}" ?selected=${(option.value === value)}>${option.label}${s}</option>`)}
+        ${options.map((option) => html`<option value="${option.value}" ?selected=${(option.value === value)}>${unsafeHTML(option.label)}${s}</option>`)}
       </select>
     </div>
   </li>
 `;
 
-export const iWillBe = (time, intermission, repititions, cylinders) => {
-  const _type = (cylinders !== false)
-    ? 'cylendars'
-    : 'bowls';
+export const getRadio = (type, checked, changer) => {
+  const _type = type.toLowerCase();
   return html`
-    <h2>I will be throwing ${repititions} ${time} ${_type} with maximum of ${intermission} break between each ${_type}</h2>
-    <ul>
-      <li>
-    </ul>
-  `
-}
+    <li>
+      <label for="ss-type--${_type}">
+        <input
+          class="hidden"
+          id="ss-type--${_type}"
+          type="radio"
+          name="ss-type-radio"
+          value="${_type}"
+          ?checked=${checked}
+          @change=${changer} />
+        ${type}
+      </label>
+    </li>`;
+};

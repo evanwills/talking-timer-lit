@@ -1,5 +1,5 @@
 import { LitElement, css, html } from 'lit';
-import { getEpre, millisecondsToTimeObj, validateTimeDuration } from '../utils/talking-timer.utils';
+import { getEpre, getPublicWarning, millisecondsToTimeObj, validateTimeDuration } from '../utils/talking-timer.utils';
 import {
   filterOffsets,
   parseRawIntervals,
@@ -23,8 +23,7 @@ import './time-display';
  */
 export class TalkingTimer extends LitElement {
   static properties = {
-    // ==============================================================
-    // START: public attributes
+    always: { type: String },
 
     /**
      * Whether or not to auto reset the timer as soon
@@ -290,65 +289,19 @@ export class TalkingTimer extends LitElement {
     voice: { type: String },
 
     //  END:  public attributes
-    // ==============================================================
-    // START: private attributes
-
-    /**
-     * The hours part of the human readable time string
-     *
-     * @property {number|null}
-     */
-    _hours: { type: Number, state: true },
-
-    /**
-     * The number of milliseconds remaining
-     *
-     * This is used to keep track of the number of milliseconds
-     * remaining. It's value is used to update the `remaining` value.
-     *
-     * It will be updated no more than once every tenth of a second
-     *
-     * @property {number} _milliseconds
-     */
-    _milliseconds: { type: Number, state: true },
-
-    /**
-     * The minutes part of the human readable time string
-     *
-     * @property {number} _tenths
-     */
-    _minutes: { type: Number, state: true },
-
-    /**
-     * The value for seconds remaining in the timer
-     *
-     * @property {number} _tenths
-     */
-    _seconds: { type: Number, state: true },
-
-    /**
-     * The value for tenths of a second remaining in the timer
-     *
-     * @property {number} _tenths
-     */
-    _tenths: { type: Number, state: true },
-
-    //  END:  private attributes
-    // ==============================================================
+    // ----------------------------------------------------
   }
 
   constructor() {
     super();
+    this.always = 'mst';
     this.autoreset = -1;
     this.autostartafter = -1;
     this.endmessage = "Your time is up!";
     this.noendchime = false;
     this.nopause = false;
     this.nosayend = false;
-    this._hours = 0;
-    this._minutes = 0;
-    this._seconds = 0;
-    this._tenths = 0;
+    this.remaining = 0;
     this.priority = 'fraction'
     this.percent = 1;
     this.say = '1/2 30s last20 last15 allLast10';
@@ -407,7 +360,7 @@ export class TalkingTimer extends LitElement {
      * Number of milliseconds remaining when the next message will
      * be spoken
      *
-     * @property {number} _milliseconds
+     * @property {number} _nextTime
      */
     this._nextTime = null;
 
@@ -451,6 +404,84 @@ export class TalkingTimer extends LitElement {
     // ----------------------------------------------------
   }
 
+  // ======================================================
+  // START: public methods
+
+  /**
+   * Pause the timer if it is already running
+   *
+   * > __Note:__ A console warning will be shown if pause cannot
+   * >           be performed
+   */
+  pause() {
+    if (this.state === 'running') {
+      this._pauseTimer();
+    } else {
+      console.warn(getPublicWarning('pause', 'running', this.state));
+    }
+  }
+
+  /**
+   * Reset the timer if it is currently running
+   *
+   * > __Note:__ A console warning will be shown if reset cannot
+   * >           be performed
+   */
+
+  reset() {
+    if (this.state !== 'running') {
+      this._restartTimer();
+    } else {
+      console.warn(getPublicWarning('reset', 'running', this.state, ''));
+    }
+  }
+
+  /**
+   * Resume paused the timer
+   *
+   * > __Note:__ A console warning will be shown if resume cannot
+   * >           be performed
+   */
+  resume() {
+    if (this.state === 'paused') {
+      this._resumeTimer();
+    } else {
+      console.warn(getPublicWarning('resume', 'paused', this.state));
+    }
+  }
+
+  /**
+   * Start the timer if it is either "ready" or "ended"
+   *
+   * > __Note:__ A console warning will be shown if start cannot
+   * >           be performed
+   */
+  start() {
+    if (this.state === 'ready' || this.state === 'ended') {
+      this._doStartup();
+    } else {
+      console.warn(getPublicWarning('start', 'ready" or "ended', this.state));
+    }
+  }
+
+  /**
+   * Stop the timer if it is currently running
+   *
+   * > __Note:__ A console warning will be shown if stop cannot
+   * >           be performed
+   */
+  stop() {
+    if (this.state === 'running') {
+      this._doEnding();
+    } else {
+      console.warn(getPublicWarning('stop', 'running', this.state));
+    }
+  }
+
+  //  END:  public methods
+  // ======================================================
+  // START: private methods
+
   _parseAttributes () {
     // ----------------------------------------------------
     // START: Process duration
@@ -458,7 +489,10 @@ export class TalkingTimer extends LitElement {
     const tmp = validateTimeDuration(this.duration);
 
     if (tmp === false) {
-      throw new Error('<talking-timer> must have a duration to work with. `duration` was invalid');
+      throw new Error(
+        '<talking-timer> must have a duration to work with. '
+        + `duration ("${this.duration}") was invalid`,
+      );
     }
     this._total = tmp;
     this.state = 'ready';
@@ -617,8 +651,6 @@ export class TalkingTimer extends LitElement {
         this._doEnding();
       }
 
-      context._setParts();
-
       context.percent = (context.remaining > 0)
         ? (Math.round((context.remaining / context._total) * 100000) / 1000)
         : 0;
@@ -724,7 +756,6 @@ export class TalkingTimer extends LitElement {
     this._messages = [...this._ogMessages];
     this.remaining = this._total;
     this.percent = 100;
-    this._setParts();
     this._tryToSayNext();
   }
 
@@ -761,14 +792,6 @@ export class TalkingTimer extends LitElement {
     return this._utterance;
   }
 
-  _setParts() {
-    const tmp = millisecondsToTimeObj(this.remaining);
-    this._hours = tmp.hours;
-    this._minutes = tmp.minutes;
-    this._seconds = tmp.seconds;
-    this._tenths = tmp.tenths;
-  }
-
   _setState(newState) {
     if (this.state !== newState) {
       this.state = newState;
@@ -795,6 +818,10 @@ export class TalkingTimer extends LitElement {
     }
   }
 
+  //  END:  private methods
+  // ======================================================
+  // START: lifecycle methods
+
   connectedCallback() {
     super.connectedCallback();
 
@@ -808,6 +835,10 @@ export class TalkingTimer extends LitElement {
 
   }
 
+  //  END:  lifecycle methods
+  // ======================================================
+  // START: render
+
   render() {
     return html`
       <div class="wrap" @keyup=${this._keyUp}>
@@ -817,10 +848,8 @@ export class TalkingTimer extends LitElement {
         <main>
           ${(this.state !== 'unset')
             ? html`<time-display
-                .hours="${this._hours}"
-                .minutes="${this._minutes}"
-                .seconds="${this._seconds}"
-                .tenths="${this._tenths}"
+                .always="${this.always}"
+                .milliseconds="${this.remaining}"
                 .progress=${(100 - this.percent)}
                 .label="${this.label}"></time-display>`
             : ''
@@ -899,6 +928,9 @@ export class TalkingTimer extends LitElement {
       }
     `;
   }
+
+  //  END:  render
+  // ======================================================
 }
 
 window.customElements.define('talking-timer', TalkingTimer);

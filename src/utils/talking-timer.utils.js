@@ -86,7 +86,7 @@ export const onlyGreaterThanZero = (currentValue) => {
  *                a second) depending on the value of the `timeObj`
  *                attribute
  */
-export const timeObjToString = (timeObj, nonZeroOnly) => {
+export const timeObjToString = (timeObj, nonZeroOnly, noTenths = true) => {
   const tmpTimeObj = (typeof nonZeroOnly !== 'boolean' || nonZeroOnly === true)
     ? onlyGreaterThanZero(timeObj)
     : { ...timeObj };
@@ -106,13 +106,15 @@ export const timeObjToString = (timeObj, nonZeroOnly) => {
     output += colon + zero + Math.round(tmpTimeObj[field]);
   }
 
-  if (tenthsField.length > 0) {
-    const colon = (output === '')
-      ? '0.'
-      : '.'
-    output += `${colon}<span class="tenths">${Math.round(tmpTimeObj.tenths)}</span>`;
-  } else if (output === '') {
-    output = '0';
+  if (noTenths === false) {
+    if (tenthsField.length > 0) {
+      const colon = (output === '')
+        ? '0.'
+        : '.'
+      output += `${colon}${Math.round(tmpTimeObj.tenths)}`;
+    } else if (output === '') {
+      output = '0';
+    }
   }
 
   return output;
@@ -258,3 +260,11 @@ export const validateTimeDuration = (time) => {
   }
   return false;
 };
+
+export const getPublicWarning = (
+  action,
+  needed,
+  state,
+  join = 'not ',
+) => `You cannot ${action} <talking-timer> because it is ${join}`
+  + `in a "${needed}" state. Current state is: "${state}"`;

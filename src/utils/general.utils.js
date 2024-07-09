@@ -63,4 +63,47 @@ export const getSsTimerlabel = (type, count) => {
 
   return `${label} number ${count}`;
 }
+export const setLocalValue = (key, value) => {
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem(key, value);
+  }
+};
+
+export const getLocalValue = (key, defaultVal, type = 'string') => {
+  if (typeof localStorage !== 'undefined') {
+    let output = localStorage.getItem(key);
+
+    if (output !== null) {
+      const t = typeof output;
+      if (typeof output === type) {
+        return output;
+      }
+      if (t === 'string') {
+        switch (type.substring(0,4).toLowerCase()) {
+          case 'numb':
+          case 'int':
+            return parseInt(output, 10);
+
+          case 'floa':
+            return parseFloat(output);
+
+          case 'bool':
+            return (output.toLowerCase().trim() === 'true');
+
+          case 'json':
+            try {
+              return JSON.parse(output);
+            } catch (e) {
+              console.error('could not parse JSON from localStorage prop: ')
+            }
+        }
+      }
+      return output;
+    }
+
+    setLocalValue(key, defaultVal);
+  }
+
+  return defaultVal;
+};
 
