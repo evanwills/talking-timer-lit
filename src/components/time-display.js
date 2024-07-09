@@ -71,12 +71,19 @@ export class TimeDisplay extends LitElement {
   }
 
   render() {
+    console.group(this._ePre('render'));
+    console.log('this.milliseconds:', this.milliseconds);
     const tmp = millisecondsToTimeObj(this.milliseconds);
     const hours = this.alwaysShow('hours', tmp.hours);
     const minutes = this.alwaysShow('minutes', tmp.minutes, hours);
     const seconds = this.alwaysShow('seconds', tmp.seconds, minutes);
     const tenths = this.alwaysShow('tenths', tmp.tenths, seconds);
-    console.log()
+    console.log('tmp:', tmp);
+    console.log('hours:', hours);
+    console.log('minutes:', minutes);
+    console.log('seconds:', seconds);
+    console.log('tenths:', tenths);
+    console.groupEnd();
 
     return html`
       <div class="human">

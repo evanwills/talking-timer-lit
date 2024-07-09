@@ -194,6 +194,7 @@ export class SpeedThrowing extends LitElement {
         setLocalValue('st-time', this._totalMilli);
         setLocalValue('st-repetitions', this._repetitions);
         setTimeout(this._getTimer(this), 1);
+        this._duration = timeObjToString(millisecondsToTimeObj(this._totalMilli));
         break;
       case 'start':
         this._state = 'running';
@@ -207,7 +208,6 @@ export class SpeedThrowing extends LitElement {
         break;
       case 'duration':
         this._totalMilli = makeInt(val);
-        this._duration = timeObjToString(millisecondsToTimeObj(this._totalMilli));
         break;
       case 'intermission':
         this._intermission = makeInt(val);
@@ -263,6 +263,10 @@ export class SpeedThrowing extends LitElement {
   }
 
   render() {
+    console.group(this._ePre('render'));
+    console.log('this._duration:', this._duration);
+    console.log('this._duration:', this._duration);
+    console.groupEnd();
     return html`
       <article>
         <dialog id="speed-throwing-config">
@@ -303,7 +307,8 @@ export class SpeedThrowing extends LitElement {
               .duration="${this._duration}"
               endmessage="Hands off your pots"
               .label="${getSsTimerlabel(this._type, this._repCount)}"
-              .saydata=${this._sayExtra}></talking-timer>`
+              .saydata=${this._sayExtra}
+              voice="catherine"></talking-timer>`
           : ''
         }
 

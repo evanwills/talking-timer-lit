@@ -702,6 +702,19 @@ export class TalkingTimer extends LitElement {
     }
   }
 
+  _getMilliseconds() {
+    if (this.state !== 'ready') {
+      return this.remaining;
+    }
+
+    const tmp = validateTimeDuration(this.duration);
+    if (tmp !== false) {
+      this._total = tmp;
+    }
+
+    return this._total;
+  }
+
   _getNextMsg() {
     const tmp = this._messages.shift();
 
@@ -849,7 +862,7 @@ export class TalkingTimer extends LitElement {
           ${(this.state !== 'unset')
             ? html`<time-display
                 .always="${this.always}"
-                .milliseconds="${this.remaining}"
+                .milliseconds="${this._getMilliseconds()}"
                 .progress=${(100 - this.percent)}
                 .label="${this.label}"></time-display>`
             : ''
