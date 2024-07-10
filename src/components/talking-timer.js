@@ -100,13 +100,31 @@ export class TalkingTimer extends LitElement {
     noendchime: { type: Boolean },
 
     /**
-     * Copy for the read the docs hint.
+     * Whether or not the user can pause the timer
      *
      * [default: false]
      *
      * @property {boolean} noPause
      */
     nopause: { type: Boolean },
+
+    /**
+     * Whether or not the user can restart the timer
+     *
+     * [default: false]
+     *
+     * @property {boolean} norestart
+     */
+    norestart: { type: Boolean },
+
+    /**
+     * Whether or not the user can reset the timer
+     *
+     * [default: false]
+     *
+     * @property {boolean} noreset
+     */
+    noreset: { type: Boolean },
 
     /**
      * Whether or not to say the end phrase
@@ -139,6 +157,20 @@ export class TalkingTimer extends LitElement {
      * @property {number} percent
      */
     percent: { type: Number, reflect: true },
+
+    /**
+     * The text to render within the pause button
+     *
+     * @property {string} pausebtntxt
+     */
+    pausebtntxt: { type: String },
+
+    /**
+     * The text to render within the start button
+     *
+     * @property {string} startbtntxt
+     */
+    startbtntxt: { type: String },
 
     /**
      * `priority` sets which announcements are discarded and which
@@ -268,6 +300,7 @@ export class TalkingTimer extends LitElement {
      * @property {number} timer
      */
     timer: { type: Number, reflect: true },
+    timerid: { type: String },
 
     /**
      * Comma separated list of names of voices to be used when
@@ -300,11 +333,16 @@ export class TalkingTimer extends LitElement {
     this.always = 'mst';
     this.autoreset = -1;
     this.autostartafter = -1;
-    this.endmessage = "Your time is up!";
+    this.endmessage = 'Your time is up!';
+    this.label = '';
     this.noendchime = false;
     this.nopause = false;
+    this.norestart = false;
+    this.noreset = false;
     this.nosayend = false;
     this.remaining = 0;
+    this.pausebtntxt = 'Pause';
+    this.startbtntxt = 'Start';
     this.priority = 'fraction'
     this.percent = 1;
     this.say = '1/2 30s last20 last15 allLast10';
@@ -314,6 +352,7 @@ export class TalkingTimer extends LitElement {
     this.startmessage = 'Ready, Set, Go';
     this.selfdestruct = -1;
     this.state = 'unset';
+    this.timerid = '';
     this.voice = '';
 
 
@@ -441,7 +480,8 @@ export class TalkingTimer extends LitElement {
 
   reset() {
     if (this.state !== 'running') {
-      this._restartTimer();
+      this._parseAttributes();
+      // this._resetTimer();
     } else {
       console.warn(getPublicWarning('reset', 'running', this.state, ''));
     }
@@ -518,7 +558,9 @@ export class TalkingTimer extends LitElement {
     if ((this.nomerge === true || sayIsNES === false) && validSay !== false) {
       this._ogMessages = validSay;
     } else if (sayIsNES === true) {
-      this._ogMessages = parseRawIntervals(this._total, this.say);
+      if (typeof this.say === 'string') {
+        this._ogMessages = parseRawIntervals(this._total, this.say);
+      }
 
       if (this.nomerge !== true || this._ogMessages.length === 0) {
         this._ogMessages = this._ogMessages.concat(validSay);
@@ -657,8 +699,8 @@ export class TalkingTimer extends LitElement {
       clearTimeout(this._autoStartID);
       this._autoStartID = null;
     }
+    this._setState('starting');
     if (this.nosaystart !== true) {
-      this._setState('starting');
       // const voice = this._saySomething(this.startmessage, 1.25);
       const voice = saySomething(this.startmessage, this._voice, this._voiceName, 1.25);
 
@@ -876,8 +918,9 @@ export class TalkingTimer extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-
     this._parseAttributes();
+
+    // this._parseAttributes();
     this.getRootNode().addEventListener('keyup', this._keyUp);
   }
 
@@ -892,6 +935,15 @@ export class TalkingTimer extends LitElement {
   // START: render
 
   render() {
+    const no = {
+      pause: this.nopause,
+      reset: this.noreset,
+      restart: this.norestart,
+    };
+    const btnTxt = {
+      start: this.startbtntxt,
+      pause: this.pausebtntxt,
+    }
     return html`
       <div class="wrap" @keyup=${this._keyUp}>
         <header>
@@ -910,13 +962,13 @@ export class TalkingTimer extends LitElement {
         <footer>
           ${(this.state === 'unset')
             ? html`<p>Not enough data</p>`
-            : getMainBtn(this.state, this._btnClick, this.nopause)
+            : getMainBtn(this.state, this._btnClick, no, btnTxt)
           }
-          ${(this.state === 'paused')
+          ${(this.state === 'paused' && no.restart !== true)
             ? getOtherBtn('Restart', this._btnClick)
             : ''
           }
-          ${(this.state === 'paused' || this.state === 'ended')
+          ${((this.state === 'paused' || this.state === 'ended')  && no.reset !== true)
             ? getOtherBtn('Reset', this._btnClick)
             : ''
           }

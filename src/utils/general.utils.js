@@ -58,11 +58,47 @@ export const getHumanOption = (options, value) => {
     : '';
 };
 
-export const getSsTimerlabel = (type, count) => {
-  const label = type.substring(0,1).toUpperCase() + type.substring(1, (type.length - 1));
+export const getTypeLabel = (type) => type.substring(0,1).toUpperCase() + type.substring(1, (type.length - 1));
 
-  return `${label} number ${count}`;
-}
+export const getTimerlabel = (type, count) => `${getTypeLabel(type)} number ${count}`;
+
+export const getWaitinglabel = (type, count) => `Waiting to start ${getTypeLabel(type)} number ${count}`;
+
+export const getDoingSayData = (time) => [
+  {
+    message: 'You should be finishing centering and opening up.',
+    offset: Math.round(time / 3) - 5000,
+  },
+  {
+    message: 'You should be starting to pull up now.',
+    offset: Math.round(time / 2) - 5000,
+  },
+];
+
+export const getWaitingSayData = (type, time) => {
+  const output = [];
+
+  if (time > 60000) {
+    output.push(
+      {
+        message: `You will be starting your next ${type} in 1 minute`,
+        offset: 60000,
+      },
+    );
+  }
+  output.push(
+    {
+      message: `Get ready to start your next ${type} in twenty seconds`,
+      offset: 22000,
+    },
+    {
+      message: 'OK!',
+      offset: 5000,
+    },
+  );
+  return output
+};
+
 export const setLocalValue = (key, value) => {
   if (typeof localStorage !== 'undefined') {
     localStorage.setItem(key, value);

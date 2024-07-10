@@ -247,7 +247,7 @@ const getRate = (msg) => {
 
 const getRelativeMsgs = (intervalObj, milliseconds, suffix) => {
   const output = [];
-  const interval = getX(intervalObj.unit);
+  let interval = getX(intervalObj.unit);
   let count = 0;
 
   if (intervalObj.every === true) {

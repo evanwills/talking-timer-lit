@@ -1,7 +1,7 @@
 import { html } from 'lit';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 
-export const getMainBtn = (state, clicker, noPause) => {
+export const getMainBtn = (state, clicker, no, btnTxt) => {
   let txt = '';
   // console.group('getMainBtn()');
   // console.log('state:', state);
@@ -10,14 +10,14 @@ export const getMainBtn = (state, clicker, noPause) => {
 
   switch (state) {
     case 'ready':
-      txt = 'Start';
+      txt = btnTxt.start;
       break;
 
     case 'running':
-      if (noPause === true) {
+      if (no.pause === true) {
         return '';
       }
-      txt = 'Pause';
+      txt = btnTxt.pause;
       break;
 
     case 'paused':

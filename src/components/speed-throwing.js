@@ -1,8 +1,9 @@
 import { LitElement, css, html } from 'lit';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
+import { ifDefined } from 'lit/directives/if-defined.js';
 import { getEpre, millisecondsToTimeObj, timeObjToString } from '../utils/talking-timer.utils';
 import { getRadio, getSelect } from './talking-timer.renderers';
-import { getHumanOption, getLocalValue, getSsTimerlabel, makeInt, setLocalValue } from '../utils/general.utils';
+import { getDoingSayData, getHumanOption, getLocalValue, getTimerlabel, getWaitinglabel, getTypeLabel, getWaitingSayData, makeInt, setLocalValue } from '../utils/general.utils';
 import './talking-timer';
 
 const timerOptions = [
@@ -78,6 +79,8 @@ for (let a = 1; a <= 10; a += 1) {
   })
 }
 
+const rawSay = '1/2 30s last20 last15 allLast10';
+
 /**
  * An example element.
  *
@@ -86,20 +89,24 @@ for (let a = 1; a <= 10; a += 1) {
  */
 export class SpeedThrowing extends LitElement {
   static properties = {
-    _duration: { type: Number, state: true },
-    _repetitions: { type: Number, state: true },
-    _repCount: { type: Number, state: true },
-    _doCylinders: { type: Boolean, state: true },
-    _intermission: { type: Number, state: true },
-    _timerState: { type: String, state: true },
     _confirmed: { type: Boolean, state: true },
+    _doCylinders: { type: Boolean, state: true },
+    _duration: { type: Number, state: true },
+    _intermission: { type: Number, state: true },
+    _repCount: { type: Number, state: true },
+    _repetitions: { type: Number, state: true },
+    _started: { type: Boolean, state: true },
+    _state: { type: String, state: true },
+    _timerLabel: { type: String, state: true },
+    _timerState: { type: String, state: true },
     _totalMilli: { type: Boolean, state: true },
     _type: { type: String, state: true },
-    _state: { type: String, state: true },
-    _started: { type: Boolean, state: true },
+    _timerID: { type: String, state: true },
   }
   constructor() {
     super();
+    this._ePre = getEpre('<speed-throwing>');
+    console.group(this._ePre('constructor'));
 
     this._repetitions = getLocalValue('st-repetitions', 5, 'int');
     this._doCylinders = getLocalValue('st-cylinders', true, 'bool');
@@ -117,58 +124,129 @@ export class SpeedThrowing extends LitElement {
       : '';
     this._started = false;
     this._timerState = 'unset';
-
+``
     this._dialogue = null;
-    this._ePre = getEpre('speed-throwing');
-    this._sayExtra = [
-      {
-        message: 'You should be finishing centering and opening up',
-        offset: 115000,
-      },
-      {
-        message: '',
-        offset: 85000,
-      },
-    ];
+    this._sayExtra = getDoingSayData(this._totalMilli);
     this._timer = null;
+    this._timerLabel = getTimerlabel(this._type, this._repCount);
     this._breakID = null;
+    this._timerID = 'doing';
+    this._killTT = 100;
+    this._pauseBtnTxt = 'Pause';
+    this._noExtras = false;
+    this._say = rawSay;
+
+    console.log('this._state:', this._state);
+    if (this._state === 'ready') {
+      console.log('about to get timer element');
+      this._getTimer(this)();
+    }
+    console.groupEnd();
   }
 
   _getTimer(context) {
     return () => {
+      context._killTT -= 1;
       if (context._timer === null) {
         context._timer = context.renderRoot?.querySelector('#speed-throwing-timer') ?? null;
 
         if (context._timer !== null) {
           context._timer.addEventListener(
             'statechange',
-            context._handleTimerChange,
+            context._handleTimerChange(context),
           );
-        } else {
-          setTimeout(context._getTimer(context), 1);
+        } else if (context._killTT > 0) {
+          setTimeout(context._getTimer(context), 100);
         }
       }
     };
   }
 
-  _handleTimerChange(event) {
-    console.group(this._ePre('_handleTimerChange'));
-    console.log('event:', event);
-    console.log('event.target:', event.target);
-    console.log('event.target.id:', event.target.id);
-    console.log('event.target.state:', event.target.state);
-    switch (event.target.state) {
-      case 'ending':
-        break;
-
-      case 'ended':
-        break;
-
-      case 'running':
-        this._started = true;
-        break;
+  _triggerTimerRestart(ttElement) {
+    if (this._timerID === 'doing') {
+      // update timer config to doing values
+      this._duration = timeObjToString(millisecondsToTimeObj(this._totalMilli));;
+      this._noExtras = false;
+      this._pauseBtnTxt = 'Pause';
+      this._say = rawSay;
+      this._sayExtra = getDoingSayData(this._totalMilli);
+      this._timerLabel = getTimerlabel(this._type, this._repCount);
+    } else {
+      // update timer config to waiting values
+      this._duration = timeObjToString(millisecondsToTimeObj(this._intermission));
+      this._noExtras = true;
+      this._pauseBtnTxt = `Start your next ${getTypeLabel(this._type)} now`;
+      this._say = '';
+      this._sayExtra = getWaitingSayData(getTypeLabel(this._type), this._intermission);
+      this._timerLabel = getWaitinglabel(this._type, this._repCount);
     }
-    console.groupEnd();
+
+    // wait a bit of timer to allow the timer config to propogate
+    // before start the timer again.
+    setTimeout(() => {
+      ttElement.reset();
+      ttElement.start();
+    }, 100);
+  }
+
+  _handleTimerChange() {
+    return (event) => {
+      console.group(this._ePre('_handleTimerChange'));
+      console.info('this is <speed-throwing>');
+      console.log('event:', event);
+      console.log('event.target:', event.target);
+      console.log('event.target.id:', event.target.id);
+      console.log('event.target.state:', event.target.state);
+      console.log('event.target.timerid:', event.target.timerid);
+
+      const ttElement = event.target
+      const { state, timerid } = event.target;
+      console.log('state:', state);
+      console.log('timerid:', timerid);
+      console.log('this:', this);
+
+      switch (state) {
+        case 'ending':
+          break;
+
+        case 'ended':
+          this._timerID = (timerid === 'doing')
+            ? 'waiting'
+            : 'doing';
+          if (timerid === 'waiting') {
+            // Our latest intermission has ended so start the doing
+            // timer
+            this._triggerTimerRestart(ttElement);
+          } else if (this._repCount < this._repetitions); {
+            // We've just finished throwing but we've still got more
+            // to do.
+            // Start the next intermission.
+
+            this._repCount += 1;
+
+            this._triggerTimerRestart(ttElement);
+          }
+          break;
+
+        case 'pause':
+          if (timerid === 'waiting') {
+            this._timerID = 'doing';
+            // User wants to start their next pot in before the end of
+            // the intermission.
+            // That's fine.
+            this._triggerTimerRestart(ttElement);
+          }
+          break;
+
+        case 'starting':
+          break;
+
+        case 'running':
+          this._state = 'running'
+          break;
+      }
+      console.groupEnd();
+    }
   }
 
   _handleChange(event) {
@@ -197,15 +275,12 @@ export class SpeedThrowing extends LitElement {
         setLocalValue('st-intermission', this._intermission);
         setLocalValue('st-time', this._totalMilli);
         setLocalValue('st-repetitions', this._repetitions);
+        this._timerLabel = getSsTimerlabel(this._type, this._repCount);
         setTimeout(this._getTimer(this), 1);
         this._duration = timeObjToString(millisecondsToTimeObj(this._totalMilli));
         break;
       case 'start':
         this._state = 'running';
-        this._timer = this.renderRoot?.querySelector('#speed-throwing-timer') ?? null;
-        if (this._timer !== null) {
-          this._timer.addEventListener('statechange', this._handleTimerChange)
-        }
         break;
       case 'config':
         this._dialogue.showModal();
@@ -269,7 +344,6 @@ export class SpeedThrowing extends LitElement {
   render() {
     console.group(this._ePre('render'));
     console.log('this._duration:', this._duration);
-    console.log('this._duration:', this._duration);
     console.groupEnd();
     return html`
       <article>
@@ -306,11 +380,16 @@ export class SpeedThrowing extends LitElement {
         ${(this._confirmed === true)
           ? html`<talking-timer
               id="speed-throwing-timer"
-              .autoreset="${Math.round(this._intermission / 10)}"
               .duration="${this._duration}"
               endmessage="Hands off your pots"
-              .label="${getSsTimerlabel(this._type, this._repCount)}"
+              .label="${this._timerLabel}"
+              ?noendchime=${this._noExtras}
+              ?nosayend=${this._noExtras}
+              ?nosaystart=${this._noExtras}
+              .pausebtntxt="${this._pauseBtnTxt}"
+              .say=${this._say}
               .saydata=${this._sayExtra}
+              .timerid="${this._timerID}"
               voice="catherine"></talking-timer>`
           : ''
         }
@@ -319,6 +398,7 @@ export class SpeedThrowing extends LitElement {
       </article>
     `;
   }
+
   static get styles() {
     return css`
       * {
