@@ -91,3 +91,13 @@ export const getRadio = (type, checked, changer) => {
       </label>
     </li>`;
 };
+
+export const renderEndMsg = (heading, msg, changer) => html`
+  <header><h2>${heading}</h2></header>
+  <main><p>${msg}</p></main>
+  <footer>
+    <button type="button" value="start-over" @click=${changer}>
+      Start session again
+    </button>
+  </footer>
+`;

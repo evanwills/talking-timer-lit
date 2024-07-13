@@ -1,4 +1,4 @@
-
+import { html } from 'lit';
 /**
  * Check whether the input is a plain JavaScript object.
  *
@@ -58,11 +58,17 @@ export const getHumanOption = (options, value) => {
     : '';
 };
 
+export const getWrappingLabel = (label) => {
+  const post = label.replace(/^.*?(?=[0-9]+ of [0-9]+$)/i, '');
+
+  return html`${label.replace(post, '')}<br />${post}`
+}
+
 export const getTypeLabel = (type) => type.substring(0,1).toUpperCase() + type.substring(1, (type.length - 1));
 
-export const getTimerlabel = (type, count) => `${getTypeLabel(type)} number ${count}`;
+export const getTimerlabel = (type, count, total) => `${getTypeLabel(type)} number ${count} of ${total}`;
 
-export const getWaitinglabel = (type, count) => `Waiting to start ${getTypeLabel(type)} number ${count}`;
+export const getWaitinglabel = (type, count) => html`Waiting to start ${getTypeLabel(type)} number ${count}`;
 
 export const getDoingSayData = (time) => [
   {
@@ -89,11 +95,11 @@ export const getWaitingSayData = (type, time) => {
   output.push(
     {
       message: `Get ready to start your next ${type} in twenty seconds`,
-      offset: 22000,
+      offset: 23000,
     },
     {
-      message: 'OK!',
-      offset: 5000,
+      message: `Are you ready to start your next ${type}?`,
+      offset: 4500,
     },
   );
   return output

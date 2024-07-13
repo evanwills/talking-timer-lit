@@ -11,7 +11,7 @@ import {
   getOtherBtn,
   stateError,
 } from './talking-timer.renderers';
-import { saySomething } from '../utils/speach.utils';
+import { getVoiceName, saySomething } from '../utils/speach.utils';
 import { playEndChime } from '../utils/sound.utils';
 // import playEndChime from '../utils/play-tone';
 import './time-display';
@@ -587,7 +587,7 @@ export class TalkingTimer extends LitElement {
     this._voiceName = null;
 
     if (this.voice !== '') {
-      this._voiceName = this._getVoiceName(this.voice);
+      this._voiceName = getVoiceName(this.voice);
     }
     if (this._voiceName === null) {
       console.group('Avaliable voices');
@@ -596,7 +596,7 @@ export class TalkingTimer extends LitElement {
       console.log(speechSynthesis.getVoices().map((voice) => voice.name));
       console.groupEnd();
 
-      this._voiceName = this._getVoiceName(this._defaultVoice);
+      this._voiceName = getVoiceName(this._defaultVoice);
     }
 
     if (this._voiceName !== null) {
@@ -810,25 +810,6 @@ export class TalkingTimer extends LitElement {
     }
   }
 
-  _getVoiceName(options) {
-    const _options = options.split(',').map((item) => item.trim().toLowerCase());
-
-    const available = speechSynthesis.getVoices().map(
-      (item) => ({
-        voice: item,
-        name: item.name.trim().toLowerCase() }
-      ));
-
-      for (let a = 0; a < _options.length; a += 1) {
-      const tmp = available.find((item) => item.name.includes(_options[a]));
-      if (typeof tmp !== 'undefined') {
-        return tmp.voice;
-      }
-    }
-
-    return null;
-  }
-
   _initInterval(force = false) {
     if (this._intervalID === null || force === true) {
       this._intervalID = setInterval(this._decrementCB, 50);
@@ -927,6 +908,7 @@ export class TalkingTimer extends LitElement {
   disconnectedCallback() {
     super.disconnectedCallback();
     this.getRootNode().removeEventListener('keyup', this._keyUp);
+    this.state = 'unset';
 
   }
 
@@ -980,15 +962,15 @@ export class TalkingTimer extends LitElement {
   static get styles() {
     return css`
       div.wrap {
-        box-sizing: border-box;
         border: var(--tt-border, 0.05rem solid #000);
+        box-sizing: border-box;
         display: flex;
         flex-direction: column;
-        font-family: arial, helvetica, sans-serif;
+        font-family: var(--tt-font, arial, helvetica, sans-serif);
         justify-content: center;
-        min-width: 12.5rem;
-        max-width: 18rem;
         margin: 0 auto;
+        max-width: 18rem;
+        min-width: 12.5rem;
         width: 100%;
 
       }
@@ -1001,7 +983,7 @@ export class TalkingTimer extends LitElement {
         padding: var(--tt-padding, 0.5rem);
       }
       .btn {
-        border-radius: var(--tt-btn-radius, 0);
+        border-radius: var(--tt-btn-bdr-radius, 0);
         border: var(--tt-border, 0.05rem solid #000);
         flex-grow: 1;
         font-family: var(--tt-btn-font, verdana, arial, helvetica, sans-serif);
@@ -1010,25 +992,26 @@ export class TalkingTimer extends LitElement {
         text-transform: var(--tt-t-transform, uppercase);
       }
       .btn--start, .btn--resume {
-        background-color: var(--tt-btn-bg-colour, #030);
+        background-color: var(--tt-btn-bg-colour-start, #030);
       }
       .btn--pause, .btn--restart {
-        background-color: var(--tt-btn-bg-colour, #004);
+        background-color: var(--tt-btn-bg-colour-pause, #004);
       }
       .btn--reset {
-        background-color: var(--tt-btn-bg-colour, #600);
+        background-color: var(--tt-btn-bg-colour-rest, #600);
       }
       main {
         padding: var(--tt-padding, 0.5rem);
       }
       h2 {
-        padding: 0.5rem 0.5rem 0 0.5rem;
-        margin: 0;
-        font-weight: var(--tt-h-weight, normal);
-        font-size: var(--tt-h-size, 1.5rem);
         font-family: var(--tt-h-font, verdana, arial, helvetica, sans-serif);
+        font-size: var(--tt-h-size, 1.5rem);
+        font-weight: var(--tt-h-weight, normal);
         line-height: var(--tt-h-line-h, 1.5rem);
+        margin: 0;
+        padding: 0.5rem 0.5rem 0 0.5rem;
         text-align: center;
+        text-wrap: pretty;
       }
     `;
   }
