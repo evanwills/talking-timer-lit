@@ -35,7 +35,7 @@ export class RadioInput extends LitElement {
     super.connectedCallback();
   }
 
-  renderInput(id, label, value, changer, defaultVal) {
+  renderInput(id, label, value, defaultVal, changer) {
     return html`
       <li>
         <input
@@ -62,8 +62,8 @@ export class RadioInput extends LitElement {
             this.id,
             option.label,
             option.value,
-            this._changeHandler,
             this.value,
+            this._changeHandler,
           ))}
         </ul>
       </li>`;
