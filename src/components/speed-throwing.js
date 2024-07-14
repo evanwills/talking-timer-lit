@@ -497,6 +497,10 @@ export class SpeedThrowing extends LitElement {
         max-width: 28rem;
         width: 100%:
       }
+      dialog::backdrop {
+        background-color: rgba(0, 0, 0, 0.8);
+        background-color: var(--tt-backdrop, rgba(0, 0, 0, 0.8));
+      }
       dialog h1 {
         margin: 0 0 1rem;
         line-height: 1rem;

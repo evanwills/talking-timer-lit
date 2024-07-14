@@ -12,6 +12,7 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
+  --tt-backdrop: rgba(0, 0, 0, 0.8);
   --tt-border: 0.05rem solid #fff;
   --tt-btn-bg-colour-start: #030;
   --tt-btn-bg-colour-pause: #004;
@@ -28,11 +29,11 @@
 
 body {
   margin: 0 auto;
-  display: flex;
-  justify-content: center;
-  place-items: center;
+  padding: 1rem;
+
   min-width: 30rem;
   min-height: 100vh;
+  max-width: 48rem;
 }
 
 @media (prefers-color-scheme: light) {
