@@ -1,6 +1,6 @@
 import { LitElement, css, html } from 'lit';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
-import { ifDefined } from 'lit/directives/if-defined.js';
+// import { ifDefined } from 'lit/directives/if-defined.js';
 import { getEpre, millisecondsToTimeObj, timeObjToString } from '../utils/talking-timer.utils';
 import { getRadio, getSelect, renderEndMsg } from './talking-timer.renderers';
 import {
@@ -14,8 +14,9 @@ import {
   makeInt,
   setLocalValue,
 } from '../utils/general.utils';
-import './talking-timer';
 import { getVoiceName, saySomething } from '../utils/speach.utils';
+import './radio-input';
+import './talking-timer';
 
 const timerOptions = [
   {
@@ -129,6 +130,11 @@ const aboutFailureDecline = 'For most beginners (and many '
   + 'brain is getting tired.'
 const aboutTiming = ''
 
+const boolOptions = [
+  { label: 'No', value: 'true' },
+  { label: 'Yes', value: 'false' },
+];
+
 const reps = [];
 for (let a = 1; a <= 10; a += 1) {
   reps.push({
@@ -177,6 +183,7 @@ export class SpeedThrowing extends LitElement {
     this._inRestart = false;
     this._killTT = 100;
     this._noExtras = false;
+    this._noEndChime = false;
     this._pauseBtnTxt = 'Pause';
     this._repCount = 1;
     this._say = rawSay;
@@ -357,6 +364,24 @@ export class SpeedThrowing extends LitElement {
     }
   }
 
+  _handleRadioChange(event) {
+    // console.group(this._ePre('_handleRadioChange'));
+    // const { id, value } = event.target;
+    // console.log('event.target:', event.target);
+    // console.log('event.target.id:', event.target.id);
+    // console.log('id:', id);
+    // console.log('value:', value);
+    // console.log('this._noEndChime (before):', this._noEndChime);
+
+    switch (id) {
+      case 'no-end-chime':
+        this._noEndChime = (value === 'true');
+        break;
+    }
+    // console.log('this._noEndChime (after):', this._noEndChime);
+    // console.groupEnd();
+  }
+
   connectedCallback() {
     super.connectedCallback();
     let a = 10;
@@ -433,6 +458,12 @@ export class SpeedThrowing extends LitElement {
                 'ss-intermission',
                 this._handleChange
               )}
+              <radio-input
+                id="no-end-chime"
+                label="Play end chime"
+                .options=${boolOptions}
+                .value="${(this._noEndChime === true) ? 'true' : 'false'}"
+                @change=${this._handleRadioChange}></radio-input>
             </ul>
             ${iWill}
             <button type="button" value="confirm" id="ss-confirm" @click=${this._handleChange}>Save settings</button>
@@ -460,7 +491,7 @@ export class SpeedThrowing extends LitElement {
               .duration="${this._duration}"
               endmessage="Hands off your pots"
               .label="${timerLabel}"
-              ?noendchime=${this._noExtras}
+              ?noendchime=${this._noExtras || this._noEndChime}
               ?nosayend=${this._noExtras}
               ?nosaystart=${this._noExtras}
               .pausebtntxt="${this._pauseBtnTxt}"
@@ -519,7 +550,6 @@ export class SpeedThrowing extends LitElement {
       ul.fields > li div {
         box-sizing: border-box;
         display: flex;
-        column-gap: 1rem;
         margin: 0;
         list-style-type: none;
         padding: 0 1rem 0 0;
