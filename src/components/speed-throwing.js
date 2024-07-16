@@ -134,6 +134,12 @@ const boolOptions = [
   { label: 'No', value: 'true' },
   { label: 'Yes', value: 'false' },
 ];
+const lenOptions = [
+  { label: 'None', value: '0' },
+  { label: 'Short', value: '1' },
+  { label: 'Medium', value: '2' },
+  { label: 'Long', value: '3' },
+]
 
 const reps = [];
 for (let a = 1; a <= 10; a += 1) {
@@ -188,6 +194,8 @@ export class SpeedThrowing extends LitElement {
     this._repCount = 1;
     this._say = rawSay;
     this._sayExtra = getDoingSayData(this._totalMilli);
+    this._saySessionEnd = 1;
+    this._saySessionStart = 0;
     this._started = false;
     this._state = (this._confirmed === true)
       ? 'ready'
@@ -365,21 +373,31 @@ export class SpeedThrowing extends LitElement {
   }
 
   _handleRadioChange(event) {
-    // console.group(this._ePre('_handleRadioChange'));
-    // const { id, value } = event.target;
-    // console.log('event.target:', event.target);
-    // console.log('event.target.id:', event.target.id);
-    // console.log('id:', id);
-    // console.log('value:', value);
-    // console.log('this._noEndChime (before):', this._noEndChime);
+    console.group(this._ePre('_handleRadioChange'));
+    const { id, value } = event.target;
+    console.log('event.target:', event.target);
+    console.log('event.target.id:', event.target.id);
+    console.log('id:', id);
+    console.log('value:', value);
+    console.log('this._noEndChime (before):', this._noEndChime);
+    console.log('this._saySessionEnd (before):', this._saySessionEnd);
+    console.log('this._saySessionStart (before):', this._saySessionEnd);
 
     switch (id) {
       case 'no-end-chime':
         this._noEndChime = (value === 'true');
         break;
+      case 'say-session-end':
+        this._saySessionEnd = parseInt(value, 10);
+        break;
+      case 'say-session-start':
+        this._saySessionStart = parseInt(value, 10);
+        break;
     }
-    // console.log('this._noEndChime (after):', this._noEndChime);
-    // console.groupEnd();
+    console.log('this._saySessionStart (after):', this._saySessionEnd);
+    console.log('this._saySessionEnd (after):', this._saySessionEnd);
+    console.log('this._noEndChime (after):', this._noEndChime);
+    console.groupEnd();
   }
 
   connectedCallback() {
@@ -459,10 +477,22 @@ export class SpeedThrowing extends LitElement {
                 this._handleChange
               )}
               <radio-input
+                id="say-session-start"
+                label="Say session intro"
+                .options=${lenOptions}
+                .value="${this._saySessionStart}"
+                @change=${this._handleRadioChange}></radio-input>
+              <radio-input
                 id="no-end-chime"
                 label="Play end chime"
                 .options=${boolOptions}
                 .value="${(this._noEndChime === true) ? 'true' : 'false'}"
+                @change=${this._handleRadioChange}></radio-input>
+              <radio-input
+                id="say-session-end"
+                label="Say end of session info"
+                .options=${lenOptions}
+                .value="${this._saySessionEnd}"
                 @change=${this._handleRadioChange}></radio-input>
             </ul>
             ${iWill}
@@ -525,7 +555,7 @@ export class SpeedThrowing extends LitElement {
         font-size: 1.125rem;
       }
       dialog {
-        max-width: 28rem;
+        max-width: 37.5rem;
         width: 100%:
       }
       dialog::backdrop {

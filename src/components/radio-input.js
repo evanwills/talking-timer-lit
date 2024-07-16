@@ -136,7 +136,7 @@ export class RadioInput extends LitElement {
           font-size: 1.1rem;
           font-weight: bold;
           height: 1.1rem;
-          left: 1rem;
+          left: 1.1rem;
           line-height: 1.5rem;
           opacity: 1;
           position: absolute;
