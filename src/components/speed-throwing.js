@@ -175,6 +175,8 @@ export class SpeedThrowing extends LitElement {
   constructor() {
     super();
     this._ePre = getEpre('<speed-throwing>');
+    this._tmp = {};
+    this._type = 'Cylinders';
 
     this._confirmed = getLocalValue('st-confirmed', false, 'bool');
     this._doCylinders = getLocalValue('st-cylinders', true, 'bool');
@@ -203,15 +205,14 @@ export class SpeedThrowing extends LitElement {
     this._timer = null;
     this._timerID = 'doing';
     this._timerState = 'unset';
-    this._type = (this._doCylinders === true)
-      ? 'cylinders'
-      : 'bowls';
     this._voice = window.speechSynthesis;
     this._voiceName = getVoiceName(this._defaultVoice);
 
     if (this._state === 'ready') {
       this._getTimer(this)();
     }
+    this._setTmp();
+    this._setType();
   }
 
   _getTimer(context) {
@@ -341,16 +342,27 @@ export class SpeedThrowing extends LitElement {
         setLocalValue('st-intermission', this._intermission);
         setLocalValue('st-time', this._totalMilli);
         setLocalValue('st-repetitions', this._repetitions);
+
+        this._setTmp();
+        this._setType();
+
         setTimeout(this._getTimer(this), 1);
         this._duration = timeObjToString(millisecondsToTimeObj(this._totalMilli));
         break;
       case 'close':
+        this._confirmed = getLocalValue('st-confirmed', this._tmp.confirmed, 'bool');
+        this._doCylinders = getLocalValue('st-cylinders', this._tmp.doCylinders, 'bool');
+        this._intermission = getLocalValue('st-intermission', this._tmp.doCylinders, 'int');
+        this._totalMilli = getLocalValue('st-time', this._tmp.totalMilli, 'int');
+        this._repetitions = getLocalValue('st-repetitions', this._tmp.repetitions, 'int');
+        this._setType();
         this._dialogue.close();
         break;
       case 'start':
         this._state = 'running';
         break;
       case 'config':
+        this._setTmp();
         this._dialogue.showModal();
         break;
       case 'duration':
@@ -376,15 +388,7 @@ export class SpeedThrowing extends LitElement {
   }
 
   _handleRadioChange(event) {
-    console.group(this._ePre('_handleRadioChange'));
     const { id, value } = event.target;
-    console.log('event.target:', event.target);
-    console.log('event.target.id:', event.target.id);
-    console.log('id:', id);
-    console.log('value:', value);
-    console.log('this._noEndChime (before):', this._noEndChime);
-    console.log('this._saySessionEnd (before):', this._saySessionEnd);
-    console.log('this._saySessionStart (before):', this._saySessionEnd);
 
     switch (id) {
       case 'no-end-chime':
@@ -397,11 +401,23 @@ export class SpeedThrowing extends LitElement {
         this._saySessionStart = parseInt(value, 10);
         break;
     }
-    console.log('this._saySessionStart (after):', this._saySessionEnd);
-    console.log('this._saySessionEnd (after):', this._saySessionEnd);
-    console.log('this._noEndChime (after):', this._noEndChime);
-    console.groupEnd();
   }
+
+  _setType() {
+    this._type = (this._doCylinders === true)
+      ? 'cylinders'
+      : 'bowls';
+  }
+
+  _setTmp() {
+    this._tmp = {
+      confirmed: this._confirmed,
+      doCylinders: this._doCylinders,
+      intermission: this._intermission,
+      repetitions: this._repetitions,
+      totalMilli: this._totalMilli,
+    };
+  };
 
   connectedCallback() {
     super.connectedCallback();
