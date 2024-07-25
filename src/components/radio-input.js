@@ -114,7 +114,7 @@ export class RadioInput extends LitElement {
           border-left: none;
         }
         label {
-          padding: 0.15rem 1.5rem;
+          padding: 0.05rem 1.5rem 0.15rem;
           border-radius: 10rem;
           position: relative;
           display: inline-block;
@@ -126,24 +126,36 @@ export class RadioInput extends LitElement {
           border: 0.05rem solid #fff;
           color: #000;
           margin: -0.05rem;
-          padding: 0.25rem 0.75rem 0.25rem 2.25rem;
+          padding: 0.15rem 0.75rem 0.25rem 2.25rem;
         }
         input:checked + label::before {
           border: 0.175rem solid #000;
           border-radius: 10rem;
+          content: '';
+          display: block;
+          height: 1.1rem;
+          left: 1rem;
+          opacity: 1;
+          position: absolute;
+          top: 50%;
+          transform: translate(-50%, -50%);
+          width: 1.1rem;
+        }
+        input:checked + label::after {
+          border: none;
           content: '\\02518';
           display: block;
           font-size: 1.1rem;
           font-weight: bold;
-          height: 1.1rem;
-          left: 1.1rem;
+          height: 1.2rem;
+          left: 1rem;
           line-height: 1.5rem;
           opacity: 1;
           position: absolute;
           padding-left: 0.25rem;
           top: 50%;
           text-align: center;
-          transform: translate(-50%, -50%) rotate(30deg) ;
+          transform: translate(-50%, -50%) rotate(30deg);
           width: 1.1rem;
         }
       `;

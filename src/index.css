@@ -1,19 +1,10 @@
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-
+  --tt-colour: #fff;
+  --tt-bg-colour: #222;
   --tt-backdrop: rgba(0, 0, 0, 0.8);
   --tt-border: 0.05rem solid #fff;
+  --tt-btn-colour: #222;
+  --tt-btn-bg-colour: rgb(255, 239, 0);
   --tt-btn-bg-colour-start: #030;
   --tt-btn-bg-colour-pause: #004;
   --tt-btn-bg-colour-rest: #600;
@@ -25,6 +16,20 @@
   --tt-padding: 0.5rem;
   --tt-t-transform: uppercase;
   --tt-font: arial, helvetica, sans-serif;
+  --tt-box-shadow: 0.5rem 0.5rem 1.5rem rgba(0, 0, 0, 0.7);
+
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: var(--tt-colour, #fff);
+  background-color: var(--tt-bg-colour, #242424);
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
@@ -35,10 +40,26 @@ body {
   min-height: 100vh;
   max-width: 48rem;
 }
+.cc-link {
+  float: right;
+  display: block;
+  padding: 0.35rem 0 1rem 1rem;
+}
+.cc-link img {
+  width: 10rem;
+  height: auto;
+}
+blockquote {
+  display: flex;
+  column-gap: 0.5rem;
+  margin: 1rem 0;
+}
 
 @media (prefers-color-scheme: light) {
   :root {
-    color: #213547;
-    background-color: #ffffff;
+    --tt-colour: #213547;
+    --tt-bg-colour: #fff;
+    --tt-border: 0.05rem solid #213547;
+    --tt-box-shadow: 0.5rem 0.5rem 0.5rem rgba(0, 0, 0, 0.7);
   }
 }

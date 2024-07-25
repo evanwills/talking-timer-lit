@@ -344,6 +344,9 @@ export class SpeedThrowing extends LitElement {
         setTimeout(this._getTimer(this), 1);
         this._duration = timeObjToString(millisecondsToTimeObj(this._totalMilli));
         break;
+      case 'close':
+        this._dialogue.close();
+        break;
       case 'start':
         this._state = 'running';
         break;
@@ -442,62 +445,81 @@ export class SpeedThrowing extends LitElement {
         <dialog id="speed-throwing-config">
           <div>
             <header><h1>Set up your speed throwing session</h1></header>
-            <ul class="fields">
-              <li>
-                <div role="group" aria-labeledby="ss-type">
-                  <span id="ss-type">
-                    What are you throwing?
-                  </span>
-                  <ul class="radio">
-                    ${getRadio('Cylinders', this._doCylinders, this._handleChange)}
-                    ${getRadio('Bowls', !this._doCylinders, this._handleChange)}
-                  </ul>
-                </div>
-              </li>
-              ${getSelect(
-                `Number of ${this._type}`,
-                this._repetitions,
-                reps,
-                'ss-repetitions',
-                this._handleChange,
-                '',
-              )}
-              ${getSelect(
-                'Throwing time',
-                this._totalMilli,
-                timerOptions,
-                'ss-duration',
-                this._handleChange,
-              )}
-              ${getSelect(
-                `Break between ${this._type}`,
-                this._intermission,
-                timerOptions,
-                'ss-intermission',
-                this._handleChange
-              )}
-              <radio-input
-                id="say-session-start"
-                label="Say session intro"
-                .options=${lenOptions}
-                .value="${this._saySessionStart}"
-                @change=${this._handleRadioChange}></radio-input>
-              <radio-input
-                id="no-end-chime"
-                label="Play end chime"
-                .options=${boolOptions}
-                .value="${(this._noEndChime === true) ? 'true' : 'false'}"
-                @change=${this._handleRadioChange}></radio-input>
-              <radio-input
-                id="say-session-end"
-                label="Say end of session info"
-                .options=${lenOptions}
-                .value="${this._saySessionEnd}"
-                @change=${this._handleRadioChange}></radio-input>
-            </ul>
-            ${iWill}
-            <button type="button" value="confirm" id="ss-confirm" @click=${this._handleChange}>Save settings</button>
+            <main>
+              <ul class="fields">
+                <li>
+                  <div role="group" aria-labeledby="ss-type">
+                    <span id="ss-type">
+                      What are you throwing?
+                    </span>
+                    <ul class="radio">
+                      ${getRadio('Cylinders', this._doCylinders, this._handleChange)}
+                      ${getRadio('Bowls', !this._doCylinders, this._handleChange)}
+                    </ul>
+                  </div>
+                </li>
+                ${getSelect(
+                  `Number of ${this._type}`,
+                  this._repetitions,
+                  reps,
+                  'ss-repetitions',
+                  this._handleChange,
+                  '',
+                )}
+                ${getSelect(
+                  'Throwing time',
+                  this._totalMilli,
+                  timerOptions,
+                  'ss-duration',
+                  this._handleChange,
+                )}
+                ${getSelect(
+                  `Break between ${this._type}`,
+                  this._intermission,
+                  timerOptions,
+                  'ss-intermission',
+                  this._handleChange
+                )}
+                <radio-input
+                  id="say-session-start"
+                  label="Say session intro"
+                  .options=${lenOptions}
+                  .value="${this._saySessionStart}"
+                  @change=${this._handleRadioChange}></radio-input>
+                <radio-input
+                  id="no-end-chime"
+                  label="Play end chime"
+                  .options=${boolOptions}
+                  .value="${(this._noEndChime === true) ? 'true' : 'false'}"
+                  @change=${this._handleRadioChange}></radio-input>
+                <radio-input
+                  id="say-session-end"
+                  label="Say end of session info"
+                  .options=${lenOptions}
+                  .value="${this._saySessionEnd}"
+                  @change=${this._handleRadioChange}></radio-input>
+              </ul>
+            </main>
+            <footer>
+              ${iWill}
+              <button
+                class="settings-btn"
+                id="ss-confirm"
+                type="button"
+                value="confirm"
+                @click=${this._handleChange}>Save settings</button>
+            </footer>
           </div>
+          <button
+            class="close-btn"
+            id="ss-close"
+            title="Close settings without saving"
+            type="button"
+            value="close"
+            @click=${this._handleChange}>
+            &Cross;
+            <span class="hidden">Close setings</span>
+          </button>
         </dialog>
 
         ${(this._confirmed === true) ? iWill : ''}
@@ -506,6 +528,7 @@ export class SpeedThrowing extends LitElement {
           ? html`
             <p>
               <button
+                class="settings-btn"
                 id="ss-config"
                 type="button"
                 value="config"
@@ -547,28 +570,49 @@ export class SpeedThrowing extends LitElement {
         box-sizing: border-box;
       }
       button {
-        border: var(--tt-border, 0.05rem solid #fff);
+        cursor: pointer;
+        border: none;
+      }
+      .settings-btn {
         padding: 0.5rem 1rem;
-        background-color: #c90;
-        color: #000;
+        background-color: var(--tt-btn-bg-colour, rgb(255, 239, 0));
+        color: var(--tt-btn-colour, #232323);
         font-weight: bold;
         font-size: 1.125rem;
       }
       dialog {
-        max-width: 37.5rem;
-        width: 100%:
+        border: none;
+        max-width: 39.5rem;
+        width: 100%;
+        background: transparent;
+      }
+      dialog > div {
+        background-color: var(--tt-bg-colour, #111);
+        border: var(--tt-border, 0.05rem solid #000);
+        box-shadow: var(--tt-box-shadow, 0.5rem 0.5rem 0.5rem rgba(255, 255, 255, 0.7));
+        max-width: 37.5rem
       }
       dialog::backdrop {
         background-color: rgba(0, 0, 0, 0.8);
         background-color: var(--tt-backdrop, rgba(0, 0, 0, 0.8));
       }
-      dialog h1 {
+      dialog > div > footer {
+        padding: 1rem;
+      }
+      dialog > div > footer p {
         margin: 0 0 1rem;
+      }
+      dialog > div > header {
+        margin: 0 0;
+        padding: 1rem;
+      }
+      dialog h1 {
         line-height: 1rem;
+        margin: 0;
       }
       ul.fields {
         box-sizing: border-box;
-        margin: 0 -1rem;
+        margin: 0;
         padding: 0;
         list-style-type: none;
       }
@@ -668,6 +712,17 @@ export class SpeedThrowing extends LitElement {
         padding: 0.5rem 0.5rem 0 0.5rem;
         text-align: center;
         text-wrap: pretty;
+      }
+      .close-btn {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        border: none;
+        padding: 1rem;
+        background-color: transparent;
+        font-size: 1.9rem;
+        line-height: 0.35em;
+        cursor: pointer;
       }
     `;
   }

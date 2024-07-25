@@ -73,11 +73,11 @@ export const getWaitinglabel = (type, count) => html`Waiting to start ${getTypeL
 export const getDoingSayData = (time) => [
   {
     message: 'You should be finishing centering and opening up.',
-    offset: Math.round(time / 3) - 5000,
+    offset: (Math.round(time * (2/3)) - 5000),
   },
   {
     message: 'You should be starting to pull up now.',
-    offset: Math.round(time / 2) - 5000,
+    offset: (Math.round(time / 2) - 5000),
   },
 ];
 

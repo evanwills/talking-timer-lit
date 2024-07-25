@@ -134,6 +134,10 @@ export class TimeDisplay extends LitElement {
       div.human:focus-within label {
         display: block;
       }
+      div.human progress {
+        display: block;
+        width: 100%;
+      }
     `;
   }
 }
