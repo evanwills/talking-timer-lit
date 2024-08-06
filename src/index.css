@@ -36,7 +36,7 @@ body {
   margin: 0 auto;
   padding: 1rem;
 
-  min-width: 30rem;
+  /* min-width: 30rem; */
   min-height: 100vh;
   max-width: 48rem;
 }

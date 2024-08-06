@@ -96,8 +96,8 @@ export const renderEndMsg = (heading, msg, changer) => html`
   <header><h2>${heading}</h2></header>
   <main><p>${msg}</p></main>
   <footer>
-    <button type="button" value="start-over" @click=${changer}>
-      Start session again
+    <button type="button" id="st-reset" value="1" @click=${changer}>
+      Reset session
     </button>
   </footer>
 `;

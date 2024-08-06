@@ -193,6 +193,7 @@ export class SpeedThrowing extends LitElement {
     this._noExtras = false;
     this._noEndChime = false;
     this._pauseBtnTxt = 'Pause';
+    this._pauseBtnValue = 'pause';
     this._repCount = 1;
     this._say = rawSay;
     this._sayExtra = getDoingSayData(this._totalMilli);
@@ -226,6 +227,10 @@ export class SpeedThrowing extends LitElement {
             'statechange',
             context._handleTimerChange(context),
           );
+          context._timer.addEventListener(
+            'custompause',
+            context._handleCustomPause(context),
+          );
         } else if (context._killTT > 0) {
           setTimeout(context._getTimer(context), 100);
         }
@@ -233,7 +238,7 @@ export class SpeedThrowing extends LitElement {
     };
   }
 
-  _triggerTimerRestart(ttElement) {
+  _triggerTimerRestart(ttElement, force = false) {
     if (this._repCount <= this._repetitions && this._inRestart === false) {
       this._inRestart = true;
 
@@ -242,6 +247,7 @@ export class SpeedThrowing extends LitElement {
         this._duration = timeObjToString(millisecondsToTimeObj(this._totalMilli));;
         this._noExtras = false;
         this._pauseBtnTxt = 'Pause';
+        this._pauseBtnValue = `pause`;
         this._say = rawSay;
         this._sayExtra = getDoingSayData(this._totalMilli);
       } else {
@@ -249,6 +255,7 @@ export class SpeedThrowing extends LitElement {
         this._duration = timeObjToString(millisecondsToTimeObj(this._intermission));
         this._noExtras = true;
         this._pauseBtnTxt = `Start your next ${getTypeLabel(this._type)} now`;
+        this._pauseBtnValue = `start-now`;
         this._repCount += 1;
         this._say = '';
         this._sayExtra = getWaitingSayData(getTypeLabel(this._type), this._intermission);
@@ -259,7 +266,7 @@ export class SpeedThrowing extends LitElement {
         // before start the timer again.
 
         setTimeout(() => {
-          ttElement.reset();
+          ttElement.reset(force);
           ttElement.start();
           this._inRestart = false;
         }, 100);
@@ -271,6 +278,22 @@ export class SpeedThrowing extends LitElement {
         }, 2000);
       }
     }
+  }
+
+  _handleCustomPause() {
+    return (event) => {
+      if (typeof event.detail === 'string' && event.detail === this._pauseBtnValue) {
+        this._timerID = 'doing';
+
+        if (this._repCount < this._repetitions); {
+          // We've just finished throwing but we've still got more
+          // to do.
+          // Start the next intermission.
+
+          this._triggerTimerRestart(event.target, true);
+        }
+      }
+    };
   }
 
   _handleTimerChange() {
@@ -323,6 +346,21 @@ export class SpeedThrowing extends LitElement {
     const val = event.target.value;
 
     switch (event.target.id.substring(3)) {
+      case 'close':
+        this._confirmed = getLocalValue('st-confirmed', this._tmp.confirmed, 'bool');
+        this._doCylinders = getLocalValue('st-cylinders', this._tmp.doCylinders, 'bool');
+        this._intermission = getLocalValue('st-intermission', this._tmp.doCylinders, 'int');
+        this._totalMilli = getLocalValue('st-time', this._tmp.totalMilli, 'int');
+        this._repetitions = getLocalValue('st-repetitions', this._tmp.repetitions, 'int');
+        this._setType();
+        this._dialogue.close();
+        break;
+
+      case 'config':
+        this._setTmp();
+        this._dialogue.showModal();
+        break;
+
       case 'confirm':
         this._confirmed = true;
         this._state = 'ready';
@@ -349,30 +387,27 @@ export class SpeedThrowing extends LitElement {
         setTimeout(this._getTimer(this), 1);
         this._duration = timeObjToString(millisecondsToTimeObj(this._totalMilli));
         break;
-      case 'close':
-        this._confirmed = getLocalValue('st-confirmed', this._tmp.confirmed, 'bool');
-        this._doCylinders = getLocalValue('st-cylinders', this._tmp.doCylinders, 'bool');
-        this._intermission = getLocalValue('st-intermission', this._tmp.doCylinders, 'int');
-        this._totalMilli = getLocalValue('st-time', this._tmp.totalMilli, 'int');
-        this._repetitions = getLocalValue('st-repetitions', this._tmp.repetitions, 'int');
-        this._setType();
-        this._dialogue.close();
-        break;
-      case 'start':
-        this._state = 'running';
-        break;
-      case 'config':
-        this._setTmp();
-        this._dialogue.showModal();
-        break;
+
       case 'duration':
         this._totalMilli = makeInt(val);
         break;
+
       case 'intermission':
         this._intermission = makeInt(val);
         break;
+
       case 'repetitions':
         this._repetitions = makeInt(val);
+        break;
+
+      case 'reset':
+        this._state = 'ready';
+        this._repCount = makeInt(val);
+        this._timerID = 'doing';
+        break;
+
+      case 'start':
+        this._state = 'running';
         break;
 
       case 'type--cylinders':
@@ -564,6 +599,7 @@ export class SpeedThrowing extends LitElement {
               ?nosayend=${this._noExtras}
               ?nosaystart=${this._noExtras}
               .pausebtntxt="${this._pauseBtnTxt}"
+              .pausebtnvalue="${this._pauseBtnValue}"
               .say=${this._say}
               .saydata=${this._sayExtra}
               .timerid="${this._timerID}"
@@ -571,11 +607,9 @@ export class SpeedThrowing extends LitElement {
           : ''
         }
         ${(this._repCount > this._repetitions)
-          ? renderEndMsg(sessionCompleteHead, sessionCompleteMsg)
+          ? renderEndMsg(sessionCompleteHead, sessionCompleteMsg, this._handleChange)
           : ''
         }
-
-
       </article>
     `;
   }

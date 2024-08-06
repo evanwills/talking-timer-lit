@@ -166,6 +166,13 @@ export class TalkingTimer extends LitElement {
     pausebtntxt: { type: String },
 
     /**
+     * The value for the pause button
+     *
+     * @property {string} pausebtntxt
+     */
+    pausebtnvalue: { type: String },
+
+    /**
      * The text to render within the start button
      *
      * @property {string} startbtntxt
@@ -342,6 +349,7 @@ export class TalkingTimer extends LitElement {
     this.nosayend = false;
     this.remaining = 0;
     this.pausebtntxt = 'Pause';
+    this.pausebtnvalue = 'pause';
     this.startbtntxt = 'Start';
     this.priority = 'fraction'
     this.percent = 1;
@@ -478,7 +486,15 @@ export class TalkingTimer extends LitElement {
    * >           be performed
    */
 
-  reset() {
+  reset(force = false) {
+    if (force === true) {
+      clearInterval(this._intervalID);
+      this._intervalID = null;
+
+      this._setState('ended');
+      this._setState('ready');
+    }
+
     if (this.state !== 'running') {
       this._parseAttributes();
       // this._resetTimer();
@@ -629,6 +645,15 @@ export class TalkingTimer extends LitElement {
       case 'reset':
         this._resetTimer();
         break;
+
+      case this.pausebtntxt.toLowerCase():
+        this.dispatchEvent(
+          new CustomEvent(
+            'custompause',
+            { bubbles: true, composed: true, detail: this.pausebtnvalue },
+          ),
+        );
+
     }
   }
 
