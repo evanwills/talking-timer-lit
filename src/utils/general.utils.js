@@ -70,16 +70,74 @@ export const getTimerlabel = (type, count, total) => `${getTypeLabel(type)} numb
 
 export const getWaitinglabel = (type, count) => html`Waiting to start ${getTypeLabel(type)} number ${count}`;
 
-export const getDoingSayData = (time) => [
-  {
-    message: 'You should be finishing centering and opening up.',
-    offset: (Math.round(time * (2/3)) - 5000),
-  },
-  {
-    message: 'You should be starting to pull up now.',
-    offset: (Math.round(time / 2) - 5000),
-  },
-];
+const withinTollerance = (actual, target, tollerance = 5) => {
+  return (actual >= (target - tollerance) && (actual <= target + tollerance));
+};
+
+const getCenteringTime = (time) => {
+  let third = Math.round((time / 3) / 1000);
+
+  if (withinTollerance(third, 60)) {
+    return 'minute';
+  }
+  if (third < 95) {
+    return `${third} seconds`;
+  }
+  // Make 1 third from seconds into minutes
+  third = Math.round((third / 60) * 100) / 100;
+  // Get only the seconds part of the value
+  let remainder = third % 1;
+
+  // remove the excess seconds
+  third -= remainder;
+
+  // Make sure we have two decimal places to work with.
+  remainder *= 100;
+
+  mPost = (third > 1)
+    ? 's'
+    : '';
+
+  if (remainder < 5) {
+    return  `${third} minute${mPost}`;
+  }
+  if (remainder > 95) {
+    return  `${(third + 1)} minute${mPost}`;
+  }
+
+  if (withinTollerance(remainder, 50, 5)) {
+    return `${third} and a half minutes`;
+  }
+
+  return `${third} minute${mPost} and ${remainder} seconds`;
+};
+
+export const getDoingSayData = (time) => {
+  const output = [
+    {
+      message: 'Use the whole of your first '
+        + `${getCenteringTime(time)} for centering.`,
+      offset: (time - 10000),
+    },
+    {
+      message: 'You should be finishing centering and starting to '
+        + 'open up.',
+      offset: (Math.round(time * (2/3)) - 5000),
+    },
+    {
+      message: 'You should be starting to pull up now.',
+      offset: (Math.round(time / 2) - 5000),
+    },
+  ];
+  if (time > 90000) {
+    output.push({
+      message: 'Remember to clean up your rim and remove excess '
+        + 'water before you run out of time',
+      offset: 2500,
+    });
+  }
+  return output;
+};
 
 export const getWaitingSayData = (type, time) => {
   const output = [];
