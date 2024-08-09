@@ -1,10 +1,14 @@
 :root {
+  --st-bg-colour: #222;
+  --st-backdrop: rgba(0, 0, 0, 0.8);
+  --st-btn-colour: #222;
+  --st-btn-colour--abort: #fff;
+  --st-btn-bg-colour: rgb(255, 239, 0);
+  --st-btn-bg-colour--abort: rgb(150, 0, 0);
+  --st-btn-bg-colour--reset: rgb(0, 100, 0);
+
   --tt-colour: #fff;
-  --tt-bg-colour: #222;
-  --tt-backdrop: rgba(0, 0, 0, 0.8);
   --tt-border: 0.05rem solid #fff;
-  --tt-btn-colour: #222;
-  --tt-btn-bg-colour: rgb(255, 239, 0);
   --tt-btn-bg-colour-start: #030;
   --tt-btn-bg-colour-pause: #004;
   --tt-btn-bg-colour-rest: #600;
@@ -24,7 +28,7 @@
 
   color-scheme: light dark;
   color: var(--tt-colour, #fff);
-  background-color: var(--tt-bg-colour, #242424);
+  background-color: var(--st-bg-colour, #242424);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -58,7 +62,7 @@ blockquote {
 @media (prefers-color-scheme: light) {
   :root {
     --tt-colour: #213547;
-    --tt-bg-colour: #fff;
+    --st-bg-colour: #fff;
     --tt-border: 0.05rem solid #213547;
     --tt-box-shadow: 0.5rem 0.5rem 0.5rem rgba(0, 0, 0, 0.7);
   }

@@ -537,9 +537,9 @@ export class TalkingTimer extends LitElement {
    * > __Note:__ A console warning will be shown if stop cannot
    * >           be performed
    */
-  stop() {
+  stop(silentEnd = false) {
     if (this.state === 'running') {
-      this._doEnding();
+      this._doEnding(silentEnd);
     } else {
       console.warn(getPublicWarning('stop', 'running', this.state));
     }
@@ -666,11 +666,11 @@ export class TalkingTimer extends LitElement {
     }
   }
 
-  _doEnding() {
+  _doEnding(silentEnd = false) {
     if (this.state !== 'running') {
       throw new Error(stateError('ended', 'running', this.state));
     }
-    const noExtra = (this.noendchime === true && this.nosayend === true);
+    const noExtra = (silentEnd === true || (this.noendchime === true && this.nosayend === true));
 
     this._setState((noExtra === false) ? 'ending' : 'ended');
 
@@ -681,6 +681,7 @@ export class TalkingTimer extends LitElement {
     let extra = 0;
 
     if (noExtra === true) {
+      this._setState('ended');
       return;
     }
 
@@ -1011,7 +1012,7 @@ export class TalkingTimer extends LitElement {
         border-radius: var(--tt-btn-bdr-radius, 0);
         border: var(--tt-border, 0.05rem solid #000);
         flex-grow: 1;
-        font-family: var(--tt-btn-font, verdana, arial, helvetica, sans-serif);
+        font-family: var(--st-btn-font, verdana, arial, helvetica, sans-serif);
         font-weight: bold;
         padding: 0.5rem;
         text-transform: var(--tt-t-transform, uppercase);

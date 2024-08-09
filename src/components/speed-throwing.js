@@ -4,16 +4,19 @@ import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { getEpre, millisecondsToTimeObj, timeObjToString } from '../utils/talking-timer.utils';
 import { getRadio, getSelect, renderEndMsg } from './talking-timer.renderers';
 import {
+  getLocalValue,
+  setLocalValue,
+} from '../utils/general.utils';
+import {
+  getBtn,
   getDoingSayData,
   getHumanOption,
-  getLocalValue,
   getTimerlabel,
   getTypeLabel,
   getWaitingSayData,
   getWrappingLabel,
   makeInt,
-  setLocalValue,
-} from '../utils/general.utils';
+} from '../utils/speed-throwing.utils';
 import { getVoiceName, saySomething } from '../utils/speach.utils';
 import './radio-input';
 import './talking-timer';
@@ -57,7 +60,7 @@ const timerOptions = [
   },
   {
     label: '5 minute',
-    value: 3000000,
+    value: 300000,
   },
   {
     label: '6 minute',
@@ -69,15 +72,15 @@ const timerOptions = [
   },
   {
     label: '8 minute',
-    value: 4800000,
+    value: 480000,
   },
   {
     label: '9 minute',
-    value: 5400000,
+    value: 540000,
   },
   {
     label: '10 minute',
-    value: 6000000,
+    value: 600000,
   },
 ];
 const endCentering = 'You should be finishing centering and opening up';
@@ -238,6 +241,12 @@ export class SpeedThrowing extends LitElement {
     };
   }
 
+  _resetState(val) {
+    this._state = 'ready';
+    this._repCount = makeInt(val);
+    this._timerID = 'doing';
+  }
+
   _triggerTimerRestart(ttElement, force = false) {
     if (this._repCount <= this._repetitions && this._inRestart === false) {
       this._inRestart = true;
@@ -346,6 +355,23 @@ export class SpeedThrowing extends LitElement {
     const val = event.target.value;
 
     switch (event.target.id.substring(3)) {
+      case 'abort':
+        // We're bumping the _repCount all the way to the end so we
+        // don't transition to the waiting timer
+        this._resetState(this._repetitions + 1);
+
+        // We're stopping the timer and forcing it to end silently
+        this._timer.stop(true);
+        // Reset the timer back to it's initial state
+        this._timer.reset(true);
+
+        // We're resetting the state again so the user can start a
+        // new session without extra button clicks
+        this._resetState(1);
+
+        this._state = 'ready';
+        break;
+
       case 'close':
         this._confirmed = getLocalValue('st-confirmed', this._tmp.confirmed, 'bool');
         this._doCylinders = getLocalValue('st-cylinders', this._tmp.doCylinders, 'bool');
@@ -365,16 +391,7 @@ export class SpeedThrowing extends LitElement {
         this._confirmed = true;
         this._state = 'ready';
         this._dialogue.close();
-        this._sayExtra = [
-          {
-            offset: Math.round(this._totalMilli / 3) - 5000,
-            message: endCentering,
-          },
-          {
-            offset: Math.round(this._totalMilli / 2) - 5000,
-            message: endOpening,
-          },
-        ];
+        this._sayExtra = getDoingSayData(this._totalMilli);
         setLocalValue('st-confirmed', this._confirmed);
         setLocalValue('st-cylinders', this._doCylinders);
         setLocalValue('st-intermission', this._intermission);
@@ -401,9 +418,7 @@ export class SpeedThrowing extends LitElement {
         break;
 
       case 'reset':
-        this._state = 'ready';
-        this._repCount = makeInt(val);
-        this._timerID = 'doing';
+        this._resetState(val);
         break;
 
       case 'start':
@@ -554,7 +569,7 @@ export class SpeedThrowing extends LitElement {
             <footer>
               ${iWill}
               <button
-                class="settings-btn"
+                class="special-btn config-btn"
                 id="ss-confirm"
                 type="button"
                 value="confirm"
@@ -575,19 +590,12 @@ export class SpeedThrowing extends LitElement {
 
         ${(this._confirmed === true) ? iWill : ''}
 
-        ${(this._state !== 'running')
-          ? html`
-            <p>
-              <button
-                class="settings-btn"
-                id="ss-config"
-                type="button"
-                value="config"
-                @click=${this._handleChange}>
-                Change settings
-              </button>
-            </p>`
-          : ''}
+        <p>
+          ${(this._state !== 'running')
+            ? getBtn('config', 'Change settings', this._handleChange)
+            : getBtn('abort', 'End speed throwing session now', this._handleChange)
+          }
+        </p>
 
         ${(this._confirmed === true && this._repCount <= this._repetitions)
           ? html`<talking-timer
@@ -623,12 +631,24 @@ export class SpeedThrowing extends LitElement {
         cursor: pointer;
         border: none;
       }
-      .settings-btn {
-        padding: 0.5rem 1rem;
-        background-color: var(--tt-btn-bg-colour, rgb(255, 239, 0));
-        color: var(--tt-btn-colour, #232323);
-        font-weight: bold;
+      .special-btn {
         font-size: 1.125rem;
+        font-weight: bold;
+        padding: 0.5rem 1rem;
+      }
+      .config-btn {
+        background-color: var(--st-btn-bg-colour, rgb(255, 239, 0));
+        color: var(--st-btn-colour, #232323);
+      }
+      .abort-btn {
+        background-color: var(--st-btn-bg-colour--abort, rgb(150, 0, 0));
+        border: 0.05rem solid var(--st-btn-colour--abort, #fff);
+        color: var(--st-btn-colour--abort, #fff);
+      }
+      .reset-btn {
+        background-color: var(--st-btn-bg-colour--rest, rgb(0, 100, 0));
+        border: 0.05rem solid var(--st-btn-colour--abort, #fff);
+        color: var(--st-btn-colour--abort, #fff);
       }
       dialog {
         border: none;
@@ -637,14 +657,14 @@ export class SpeedThrowing extends LitElement {
         background: transparent;
       }
       dialog > div {
-        background-color: var(--tt-bg-colour, #111);
+        background-color: var(--st-bg-colour, #111);
         border: var(--tt-border, 0.05rem solid #000);
         box-shadow: var(--tt-box-shadow, 0.5rem 0.5rem 0.5rem rgba(255, 255, 255, 0.7));
         max-width: 37.5rem
       }
       dialog::backdrop {
         background-color: rgba(0, 0, 0, 0.8);
-        background-color: var(--tt-backdrop, rgba(0, 0, 0, 0.8));
+        background-color: var(--st-backdrop, rgba(0, 0, 0, 0.8));
       }
       dialog > div > footer {
         padding: 1rem;
@@ -738,12 +758,12 @@ export class SpeedThrowing extends LitElement {
       .i-will--count {
         font-weight: bold;
         font-size: 0.95rem;
-        font-family: var(--tt-btn-font, verdana, arial, helvetica, sans-serif);
+        font-family: var(--st-btn-font, verdana, arial, helvetica, sans-serif);
       }
       .i-will--type {
         font-weight: bold;
         font-size: 0.95rem;
-        font-family: var(--tt-btn-font, verdana, arial, helvetica, sans-serif);
+        font-family: var(--st-btn-font, verdana, arial, helvetica, sans-serif);
       }
       .i-will--time {
         font-weight: bold;

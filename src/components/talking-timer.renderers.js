@@ -1,5 +1,6 @@
 import { html } from 'lit';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
+import { getBtn } from '../utils/speed-throwing.utils';
 
 export const getMainBtn = (state, clicker, no, btnTxt) => {
   let txt = '';
@@ -96,8 +97,6 @@ export const renderEndMsg = (heading, msg, changer) => html`
   <header><h2>${heading}</h2></header>
   <main><p>${msg}</p></main>
   <footer>
-    <button type="button" id="st-reset" value="1" @click=${changer}>
-      Reset session
-    </button>
+    ${getBtn('reset', 'Reset session', changer)}
   </footer>
 `;
