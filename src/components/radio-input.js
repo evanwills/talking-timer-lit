@@ -76,7 +76,11 @@ export class RadioInput extends LitElement {
           margin: 0;
           padding: 0;
           display: flex;
+          flex-direction: column;
+          flex-wrap: wrap;
           align-items: center;
+          justify-content: flex-start;
+          text-align: start;
         }
         span.label {
           display: inline-block;
@@ -157,6 +161,11 @@ export class RadioInput extends LitElement {
           text-align: center;
           transform: translate(-50%, -50%) rotate(30deg);
           width: 1.1rem;
+        }
+        @media screen and (min-width: 37rem) {
+          li {
+            flex-direction: row;
+          }
         }
       `;
   }

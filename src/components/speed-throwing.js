@@ -1,8 +1,8 @@
 import { LitElement, css, html } from 'lit';
-import { unsafeHTML } from 'lit/directives/unsafe-html.js';
-// import { ifDefined } from 'lit/directives/if-defined.js';
+import { ifDefined } from 'lit/directives/if-defined.js';
+// import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { getEpre, millisecondsToTimeObj, timeObjToString } from '../utils/talking-timer.utils';
-import { getRadio, getSelect, renderEndMsg } from './talking-timer.renderers';
+import { renderEndMsg } from './talking-timer.renderers';
 import {
   getLocalValue,
   setLocalValue,
@@ -10,79 +10,20 @@ import {
 import {
   getBtn,
   getDoingSayData,
-  getHumanOption,
+  getRepOptions,
+  // getHumanOption,
   getTimerlabel,
   getTypeLabel,
   getWaitingSayData,
   getWrappingLabel,
+  iWillBe,
   makeInt,
 } from '../utils/speed-throwing.utils';
 import { getVoiceName, saySomething } from '../utils/speach.utils';
 import './radio-input';
 import './talking-timer';
+import './speed-throwing-config';
 
-const timerOptions = [
-  {
-    label: '30 second',
-    value: 30000,
-  },
-  {
-    label: '60 second',
-    value: 60000,
-  },
-  {
-    label: '90 second',
-    value: 90000,
-  },
-  {
-    label: '2 minute',
-    value: 120000,
-  },
-  {
-    label: '2.5 minute',
-    value: 150000,
-  },
-  {
-    label: '3 minute',
-    value: 180000,
-  },
-  {
-    label: '3.5 minute',
-    value: 210000,
-  },
-  {
-    label: '4 minute',
-    value: 240000,
-  },
-  {
-    label: '4.5 minute',
-    value: 270000,
-  },
-  {
-    label: '5 minute',
-    value: 300000,
-  },
-  {
-    label: '6 minute',
-    value: 360000,
-  },
-  {
-    label: '7 minute',
-    value: 420000,
-  },
-  {
-    label: '8 minute',
-    value: 480000,
-  },
-  {
-    label: '9 minute',
-    value: 540000,
-  },
-  {
-    label: '10 minute',
-    value: 600000,
-  },
-];
 const endCentering = 'You should be finishing centering and opening up';
 const endOpening = 'You should be pulling up by now';
 const sessionCompleteHead = 'Speed throwing complete';
@@ -133,25 +74,6 @@ const aboutFailureDecline = 'For most beginners (and many '
   + 'brain is getting tired.'
 const aboutTiming = ''
 
-const boolOptions = [
-  { label: 'No', value: 'true' },
-  { label: 'Yes', value: 'false' },
-];
-const lenOptions = [
-  { label: 'None', value: '0' },
-  { label: 'Short', value: '1' },
-  { label: 'Medium', value: '2' },
-  { label: 'Long', value: '3' },
-]
-
-const reps = [];
-for (let a = 1; a <= 10; a += 1) {
-  reps.push({
-    label: a.toString(),
-    value: a,
-  })
-}
-
 const rawSay = '1/2 30s last20 last15 allLast10';
 
 /**
@@ -171,9 +93,10 @@ export class SpeedThrowing extends LitElement {
     _started: { type: Boolean, state: true },
     _state: { type: String, state: true },
     _timerState: { type: String, state: true },
-    _totalMilli: { type: Boolean, state: true },
+    _totalMilli: { type: Number, state: true },
     _type: { type: String, state: true },
     _timerID: { type: String, state: true },
+    _who: { type: String, state: true },
   }
   constructor() {
     super();
@@ -183,25 +106,39 @@ export class SpeedThrowing extends LitElement {
 
     this._confirmed = getLocalValue('st-confirmed', false, 'bool');
     this._doCylinders = getLocalValue('st-cylinders', true, 'bool');
-    this._intermission = getLocalValue('st-intermission', 120000, 'int');
+    this._intermission = getLocalValue('st-intermission', 90000, 'int');
+    this._noEndChime = getLocalValue('st-no-end-chime', false, 'bool');
+    this._noSayHelp = getLocalValue('st-no-say-help', false, 'bool');
     this._repetitions = getLocalValue('st-repetitions', 5, 'int');
+    this._saySessionEnd = getLocalValue('st-say-session-end', 0, 'int');
+    this._saySessionStart = getLocalValue('st-say-session-start', 0, 'int');
     this._totalMilli = getLocalValue('st-time', 180000, 'int');
+    this._who = getLocalValue('st-who', 'I', 'string');
 
     this._breakID = null;
     this._defaultVoice = 'Catherine, James, English (Australia), Zira';
-    this._dialogue = null;
     this._duration = timeObjToString(millisecondsToTimeObj(this._totalMilli));
     this._inRestart = false;
+    this._setType();
+    this._iWillBe = (this._confirmed === true)
+      ? iWillBe(
+          this._who,
+          this._repetitions,
+          this._totalMilli,
+          this._intermission,
+          this._type,
+          getRepOptions(),
+        )
+      : '';
     this._killTT = 100;
     this._noExtras = false;
-    this._noEndChime = false;
     this._pauseBtnTxt = 'Pause';
     this._pauseBtnValue = 'pause';
     this._repCount = 1;
     this._say = rawSay;
-    this._sayExtra = getDoingSayData(this._totalMilli);
-    this._saySessionEnd = 1;
-    this._saySessionStart = 0;
+    this._sayExtra = (this._noSayHelp === false)
+      ? getDoingSayData(this._totalMilli)
+      : undefined;
     this._started = false;
     this._state = (this._confirmed === true)
       ? 'ready'
@@ -216,7 +153,6 @@ export class SpeedThrowing extends LitElement {
       this._getTimer(this)();
     }
     this._setTmp();
-    this._setType();
   }
 
   _getTimer(context) {
@@ -351,6 +287,57 @@ export class SpeedThrowing extends LitElement {
     }
   }
 
+  _confirmConfig(event) {
+    const {
+      doCylinders,
+      duration,
+      intermission,
+      iWillBe,
+      noEndChime,
+      noSayHelp,
+      repetitions,
+      saySessionEnd,
+      saySessionStart,
+      who
+    } = event.detail;
+
+    this._confirmed = true;
+    this._state = 'ready';
+
+    this._doCylinders = doCylinders;
+    this._totalMilli = duration;
+    this._duration = timeObjToString(millisecondsToTimeObj(this._totalMilli));
+    this._intermission = intermission;
+    this._noEndChime = noEndChime;
+    this._noSayHelp = noSayHelp;
+    this._repetitions = repetitions;
+    this._saySessionEnd = saySessionEnd;
+    this._saySessionStart = saySessionStart;
+    this._who = who;
+    this._iWillBe = iWillBe;
+
+    this._setType();
+    this._sayExtra = (this._noSayHelp === false)
+      ? getDoingSayData(this._totalMilli)
+      : undefined;
+
+    this._setTmp();
+    this._resetState(1);
+
+    setLocalValue('st-confirmed', this._confirmed);
+    setLocalValue('st-cylinders', this._doCylinders);
+    setLocalValue('st-intermission', this._intermission);
+    setLocalValue('st-time', this._totalMilli);
+    setLocalValue('st-repetitions', this._repetitions);
+    setLocalValue('st-no-say-help', this._noSayHelp);
+    setLocalValue('st-no-end-chime', this._noEndChime);
+    setLocalValue('st-say-session-start', this._saySessionStart);
+    setLocalValue('st-say-session-end', this._saySessionEnd);
+    setLocalValue('st-who', this._who);
+
+    setTimeout(this._getTimer(this), 1);
+  }
+
   _handleChange(event) {
     const val = event.target.value;
 
@@ -372,83 +359,12 @@ export class SpeedThrowing extends LitElement {
         this._state = 'ready';
         break;
 
-      case 'close':
-        this._confirmed = getLocalValue('st-confirmed', this._tmp.confirmed, 'bool');
-        this._doCylinders = getLocalValue('st-cylinders', this._tmp.doCylinders, 'bool');
-        this._intermission = getLocalValue('st-intermission', this._tmp.doCylinders, 'int');
-        this._totalMilli = getLocalValue('st-time', this._tmp.totalMilli, 'int');
-        this._repetitions = getLocalValue('st-repetitions', this._tmp.repetitions, 'int');
-        this._setType();
-        this._dialogue.close();
-        break;
-
-      case 'config':
-        this._setTmp();
-        this._dialogue.showModal();
-        break;
-
-      case 'confirm':
-        this._confirmed = true;
-        this._state = 'ready';
-        this._dialogue.close();
-        this._sayExtra = getDoingSayData(this._totalMilli);
-        setLocalValue('st-confirmed', this._confirmed);
-        setLocalValue('st-cylinders', this._doCylinders);
-        setLocalValue('st-intermission', this._intermission);
-        setLocalValue('st-time', this._totalMilli);
-        setLocalValue('st-repetitions', this._repetitions);
-
-        this._setTmp();
-        this._setType();
-
-        setTimeout(this._getTimer(this), 1);
-        this._duration = timeObjToString(millisecondsToTimeObj(this._totalMilli));
-        break;
-
-      case 'duration':
-        this._totalMilli = makeInt(val);
-        break;
-
-      case 'intermission':
-        this._intermission = makeInt(val);
-        break;
-
-      case 'repetitions':
-        this._repetitions = makeInt(val);
-        break;
-
       case 'reset':
         this._resetState(val);
         break;
 
       case 'start':
         this._state = 'running';
-        break;
-
-      case 'type--cylinders':
-        this._doCylinders = true;
-        this._type = val;
-        break;
-
-      case 'type--bowls':
-        this._doCylinders = true;
-        this._type = val;
-        break;
-    }
-  }
-
-  _handleRadioChange(event) {
-    const { id, value } = event.target;
-
-    switch (id) {
-      case 'no-end-chime':
-        this._noEndChime = (value === 'true');
-        break;
-      case 'say-session-end':
-        this._saySessionEnd = parseInt(value, 10);
-        break;
-      case 'say-session-start':
-        this._saySessionStart = parseInt(value, 10);
         break;
     }
   }
@@ -469,148 +385,45 @@ export class SpeedThrowing extends LitElement {
     };
   };
 
-  connectedCallback() {
-    super.connectedCallback();
-    let a = 10;
-    const cb = (context) => () => {
-      if (context._dialogue === null) {
-        context._dialogue = context.renderRoot?.querySelector('#speed-throwing-config') ?? null;
-
-        if (context._dialogue === null) {
-          a -= 1;
-          if (a > 0) {
-            setTimeout(cb(context), 1 );
-          }
-        } else if (context._confirmed === false) {
-          context._dialogue.showModal();
-        }
-      }
-    }
-    setTimeout(cb(this), 1 );
-  }
-
-  iWillBe() {
-    return html`
-      <p>
-        I will be throwing <span class="i-will--count">${this._repetitions}</span>,
-        <span class="i-will--time">${unsafeHTML(getHumanOption(timerOptions, this._totalMilli))}</span>
-        <span class="i-will--type">${this._type}</span>, with maximum of
-        <span class="i-will--break">${unsafeHTML(getHumanOption(timerOptions, this._intermission))}s</span>
-        break between each ${this._type.substring(0, this._type.length - 1)}.
-      </p>
-    `;
-  }
-
   render() {
     const timerLabel = getTimerlabel(this._type, this._repCount, this._repetitions);
     const timerHead = getWrappingLabel(timerLabel);
-    const iWill = this.iWillBe()
 
     return html`
       <article>
-        <dialog id="speed-throwing-config">
-          <div>
-            <header><h1>Set up your speed throwing session</h1></header>
-            <main>
-              <ul class="fields">
-                <li>
-                  <div role="group" aria-labeledby="ss-type">
-                    <span id="ss-type">
-                      What are you throwing?
-                    </span>
-                    <ul class="radio">
-                      ${getRadio('Cylinders', this._doCylinders, this._handleChange)}
-                      ${getRadio('Bowls', !this._doCylinders, this._handleChange)}
-                    </ul>
-                  </div>
-                </li>
-                ${getSelect(
-                  `Number of ${this._type}`,
-                  this._repetitions,
-                  reps,
-                  'ss-repetitions',
-                  this._handleChange,
-                  '',
-                )}
-                ${getSelect(
-                  'Throwing time',
-                  this._totalMilli,
-                  timerOptions,
-                  'ss-duration',
-                  this._handleChange,
-                )}
-                ${getSelect(
-                  `Break between ${this._type}`,
-                  this._intermission,
-                  timerOptions,
-                  'ss-intermission',
-                  this._handleChange
-                )}
-                <radio-input
-                  id="say-session-start"
-                  label="Say session intro"
-                  .options=${lenOptions}
-                  .value="${this._saySessionStart}"
-                  @change=${this._handleRadioChange}></radio-input>
-                <radio-input
-                  id="no-end-chime"
-                  label="Play end chime"
-                  .options=${boolOptions}
-                  .value="${(this._noEndChime === true) ? 'true' : 'false'}"
-                  @change=${this._handleRadioChange}></radio-input>
-                <radio-input
-                  id="say-session-end"
-                  label="Say end of session info"
-                  .options=${lenOptions}
-                  .value="${this._saySessionEnd}"
-                  @change=${this._handleRadioChange}></radio-input>
-              </ul>
-            </main>
-            <footer>
-              ${iWill}
-              <button
-                class="special-btn config-btn"
-                id="ss-confirm"
-                type="button"
-                value="confirm"
-                @click=${this._handleChange}>Save settings</button>
-            </footer>
-          </div>
-          <button
-            class="close-btn"
-            id="ss-close"
-            title="Close settings without saving"
-            type="button"
-            value="close"
-            @click=${this._handleChange}>
-            &Cross;
-            <span class="hidden">Close setings</span>
-          </button>
-        </dialog>
-
-        ${(this._confirmed === true) ? iWill : ''}
-
         <p>
           ${(this._state !== 'running')
-            ? getBtn('config', 'Change settings', this._handleChange)
+            ? html`<speed-throwing-config
+                ?do-cylinders="${this._doCylinders}"
+                .duation="${this._totalMilli}"
+                .intermission="${this._intermission}"
+                ?no-end-chime="${this._noEndChime}"
+                ?no-say-help="${this._noSayHelp}"
+                .repetitions="${this._repetitions}"
+                .say-session-end="${this._saySessionEnd}"
+                .say-session-start="${this._saySessionStart}"
+                @confirmconfig=${this._confirmConfig}></speed-throwing-config>`
             : getBtn('abort', 'End speed throwing session now', this._handleChange)
           }
         </p>
+
+        ${(this._confirmed === true) ? this._iWillBe : ''}
 
         ${(this._confirmed === true && this._repCount <= this._repetitions)
           ? html`<talking-timer
               id="speed-throwing-timer"
               .duration="${this._duration}"
-              endmessage="Hands off your pots"
+              end-message="Hands off your pots"
               .label="${timerLabel}"
-              ?noendchime=${this._noExtras || this._noEndChime}
-              ?nosayend=${this._noExtras}
-              ?nosaystart=${this._noExtras}
-              .pausebtntxt="${this._pauseBtnTxt}"
-              .pausebtnvalue="${this._pauseBtnValue}"
+              merge-both
+              ?no-end-chime=${this._noExtras || this._noEndChime}
+              ?no-say-end=${this._noExtras}
+              ?no-say-start=${this._noExtras}
+              .pause-btn-txt="${this._pauseBtnTxt}"
+              .pause-btn-value="${this._pauseBtnValue}"
               .say=${this._say}
-              .saydata=${this._sayExtra}
-              .timerid="${this._timerID}"
+              .say-data=${ifDefined(this._sayExtra)}
+              .timer-id="${this._timerID}"
               voice="catherine"><h2>${timerHead}</talking-timer>`
           : ''
         }
@@ -624,123 +437,6 @@ export class SpeedThrowing extends LitElement {
 
   static get styles() {
     return css`
-      * {
-        box-sizing: border-box;
-      }
-      button {
-        cursor: pointer;
-        border: none;
-      }
-      .special-btn {
-        font-size: 1.125rem;
-        font-weight: bold;
-        padding: 0.5rem 1rem;
-      }
-      .config-btn {
-        background-color: var(--st-btn-bg-colour, rgb(255, 239, 0));
-        color: var(--st-btn-colour, #232323);
-      }
-      .abort-btn {
-        background-color: var(--st-btn-bg-colour--abort, rgb(150, 0, 0));
-        border: 0.05rem solid var(--st-btn-colour--abort, #fff);
-        color: var(--st-btn-colour--abort, #fff);
-      }
-      .reset-btn {
-        background-color: var(--st-btn-bg-colour--rest, rgb(0, 100, 0));
-        border: 0.05rem solid var(--st-btn-colour--abort, #fff);
-        color: var(--st-btn-colour--abort, #fff);
-      }
-      dialog {
-        border: none;
-        max-width: 39.5rem;
-        width: 100%;
-        background: transparent;
-      }
-      dialog > div {
-        background-color: var(--st-bg-colour, #111);
-        border: var(--tt-border, 0.05rem solid #000);
-        box-shadow: var(--tt-box-shadow, 0.5rem 0.5rem 0.5rem rgba(255, 255, 255, 0.7));
-        max-width: 37.5rem
-      }
-      dialog::backdrop {
-        background-color: rgba(0, 0, 0, 0.8);
-        background-color: var(--st-backdrop, rgba(0, 0, 0, 0.8));
-      }
-      dialog > div > footer {
-        padding: 1rem;
-      }
-      dialog > div > footer p {
-        margin: 0 0 1rem;
-      }
-      dialog > div > header {
-        margin: 0 0;
-        padding: 1rem;
-      }
-      dialog h1 {
-        line-height: 1rem;
-        margin: 0;
-      }
-      ul.fields {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-        list-style-type: none;
-      }
-      ul.fields > li {
-        border-bottom: 0.05rem solid #fff;
-        margin: 0;
-        padding: 0;
-      }
-      ul.fields > li div {
-        box-sizing: border-box;
-        display: flex;
-        margin: 0;
-        list-style-type: none;
-        padding: 0 1rem 0 0;
-      }
-      ul.fields > li:first-child {
-        border-top: 0.05rem solid #fff;
-      }
-      ul.fields > li > div > label,
-      ul.fields > li > div > span {
-        display: inline-block;
-        padding: 0.5rem 1rem;
-        min-width: 13rem;
-      }
-      ul.fields select {
-      flex-grow: 1;
-      }
-
-      ul.radio {
-        box-sizing: border-box;
-        display: inline-flex;
-        margin: flex;
-        column-gap: 1rem;
-        list-style-type: none;
-        justify-content: start;
-        align-items: center;
-      margin: 0;
-        padding: 0;
-      }
-      ul.radio > li {
-        box-sizing: border-box;
-        border: none;
-        margin: 0;
-        padding: 0;
-      }
-      ul.radio label {
-        box-sizing: border-box;
-        padding: 0.5rem;
-        cursor: pointer;
-      }
-      ul.radio label:hover, ul.radio label:focus-within {
-        outline: 0.05rem solid #570;
-        outline-offset: 0.2rem;
-        background-color: #777;
-      }
-      ul.radio label:has(> input:checked) {
-        background-color: #040;
-      }
       /**
        * Copied from Bootstrap 5.x CSS
        */
@@ -783,19 +479,8 @@ export class SpeedThrowing extends LitElement {
         text-align: center;
         text-wrap: pretty;
       }
-      .close-btn {
-        position: absolute;
-        top: 1rem;
-        right: 1rem;
-        border: none;
-        padding: 1rem;
-        background-color: transparent;
-        font-size: 1.9rem;
-        line-height: 0.35em;
-        cursor: pointer;
-      }
     `;
   }
-}
+};
 
 window.customElements.define('speed-throwing', SpeedThrowing);

@@ -1,5 +1,6 @@
 import { html } from 'lit';
 import { isNum } from './general.utils';
+import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 
 /**
  * Get the (human readable) amount time for centring a pot
@@ -58,6 +59,19 @@ export const getBtn = (value, label, clickHandler) =>  html`
   @click=${clickHandler}>
   ${label}
 </button>`;
+
+export const getRepOptions = () => {
+  const reps = [];
+
+  for (let a = 1; a <= 10; a += 1) {
+    reps.push({
+      label: a.toString(),
+      value: a,
+    })
+  }
+
+  return reps;
+}
 
 /**
  * Get a list of message to say while a pot is being thrown;
@@ -136,6 +150,27 @@ export const getWrappingLabel = (label) => {
 
   return html`${label.replace(post, '')}<br />${post}`
 }
+
+export const iWillBe = (who, reps, duration, intermission, type, timerOptions) => {
+  const s = (reps > 1)
+    ? 's'
+    : '';
+
+  const _type = type.replace(/s$/i, '');
+
+  return html`
+    <p>
+      ${who} will be throwing <span class="i-will--count">${reps}</span>,
+      <span class="i-will--time">${unsafeHTML(getHumanOption(timerOptions, duration))}</span>
+      <span class="i-will--type">${_type}${s}</span>, with maximum of
+      <span class="i-will--break">${unsafeHTML(getHumanOption(timerOptions, intermission))}s</span>
+      break between each ${_type}.<br />
+      Total session time will be
+      <span class="i-will--total">${Math.ceil((duration * reps) + ((reps - 1) * intermission)) / 60000} minutes</span>,
+      plus reviewing time.
+    </p>
+  `;
+};
 
 export const makeInt = (input) => {
   let tmp = input;
