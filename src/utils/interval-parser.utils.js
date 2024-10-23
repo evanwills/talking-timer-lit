@@ -176,15 +176,15 @@ export const sortOffsets = (input) => {
   });
 };
 
-  /**
-   * filterOffsets() removes duplicates an items that are too close
-   * to preceeding items
-   *
-   * @param {array} offsets list of offset objects
-   *
-   * @returns {array} list of offset objects excluding duplicates and
-   *                closely occuring items
-   */
+/**
+ * filterOffsets() removes duplicates an items that are too close
+ * to preceeding items
+ *
+ * @param {array} offsets list of offset objects
+ *
+ * @returns {array} list of offset objects excluding duplicates and
+ *                closely occuring items
+ */
 export const filterOffsets = (offsets, max) => {
   let found = [];
 
@@ -201,6 +201,15 @@ export const filterOffsets = (offsets, max) => {
   })
 };
 
+/**
+ * Get milisecond multiplier for time unit to make value into the
+ * right number of miliseconds
+ *
+ * @param {string} unit FIrxt character of time unit
+ *
+ * @returns {number} Number of miliseconds to multiply the time
+ *                   value to get the duration.
+ */
 const getX = (unit) => {
   switch (unit) {
     case 'm':

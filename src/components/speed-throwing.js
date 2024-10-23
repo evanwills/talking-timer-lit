@@ -14,6 +14,7 @@ import {
   // getHumanOption,
   getTimerlabel,
   getTypeLabel,
+  getWaitinglabel,
   getWaitingSayData,
   getWrappingLabel,
   iWillBe,
@@ -24,6 +25,7 @@ import './radio-input';
 import './talking-timer';
 import './speed-throwing-config';
 
+const endMsg = 'Hands off your pots';
 const endCentering = 'You should be finishing centering and opening up';
 const endOpening = 'You should be pulling up by now';
 const sessionCompleteHead = 'Speed throwing complete';
@@ -87,15 +89,16 @@ export class SpeedThrowing extends LitElement {
     _confirmed: { type: Boolean, state: true },
     _doCylinders: { type: Boolean, state: true },
     _duration: { type: Number, state: true },
+    _endMsg: { type: String, state: true },
     _intermission: { type: Number, state: true },
     _repCount: { type: Number, state: true },
     _repetitions: { type: Number, state: true },
     _started: { type: Boolean, state: true },
     _state: { type: String, state: true },
+    _timerMode: { type: String, state: true },
     _timerState: { type: String, state: true },
     _totalMilli: { type: Number, state: true },
     _type: { type: String, state: true },
-    _timerID: { type: String, state: true },
     _who: { type: String, state: true },
   }
   constructor() {
@@ -118,6 +121,7 @@ export class SpeedThrowing extends LitElement {
     this._breakID = null;
     this._defaultVoice = 'Catherine, James, English (Australia), Zira';
     this._duration = timeObjToString(millisecondsToTimeObj(this._totalMilli));
+    this._endMsg = endMsg;
     this._inRestart = false;
     this._setType();
     this._iWillBe = (this._confirmed === true)
@@ -144,7 +148,7 @@ export class SpeedThrowing extends LitElement {
       ? 'ready'
       : '';
     this._timer = null;
-    this._timerID = 'doing';
+    this._timerMode = 'doing';
     this._timerState = 'unset';
     this._voice = window.speechSynthesis;
     this._voiceName = getVoiceName(this._defaultVoice);
@@ -180,34 +184,45 @@ export class SpeedThrowing extends LitElement {
   _resetState(val) {
     this._state = 'ready';
     this._repCount = makeInt(val);
-    this._timerID = 'doing';
+    this._timerMode = 'doing';
+    this._voice.cancel();
+  }
+
+  _setDoingVals() {
+    // update timer config to doing values
+    this._duration = timeObjToString(millisecondsToTimeObj(this._totalMilli));;
+    this._endMsg = endMsg;
+    this._noExtras = false;
+    this._pauseBtnTxt = 'Pause';
+    this._pauseBtnValue = `pause`;
+    this._say = rawSay;
+    this._sayExtra = getDoingSayData(this._totalMilli);
+  }
+
+  _setWaitingVals() {
+    // update timer config to waiting values
+    this._duration = timeObjToString(millisecondsToTimeObj(this._intermission));
+    this._endMsg = '';
+    this._noExtras = true;
+    this._pauseBtnTxt = `Start your next ${getTypeLabel(this._type)} now`;
+    this._pauseBtnValue = `start-now`;
+    this._repCount += 1;
+    this._say = '';
+    this._sayExtra = getWaitingSayData(getTypeLabel(this._type), this._intermission);
   }
 
   _triggerTimerRestart(ttElement, force = false) {
     if (this._repCount <= this._repetitions && this._inRestart === false) {
       this._inRestart = true;
 
-      if (this._timerID === 'doing') {
-        // update timer config to doing values
-        this._duration = timeObjToString(millisecondsToTimeObj(this._totalMilli));;
-        this._noExtras = false;
-        this._pauseBtnTxt = 'Pause';
-        this._pauseBtnValue = `pause`;
-        this._say = rawSay;
-        this._sayExtra = getDoingSayData(this._totalMilli);
+      if (this._timerMode === 'doing') {
+        this._setDoingVals();
       } else {
-        // update timer config to waiting values
-        this._duration = timeObjToString(millisecondsToTimeObj(this._intermission));
-        this._noExtras = true;
-        this._pauseBtnTxt = `Start your next ${getTypeLabel(this._type)} now`;
-        this._pauseBtnValue = `start-now`;
-        this._repCount += 1;
-        this._say = '';
-        this._sayExtra = getWaitingSayData(getTypeLabel(this._type), this._intermission);
+        this._setWaitingVals();
       }
 
       if (this._repCount <= this._repetitions) {
-        // wait a bit of timer to allow the timer config to propogate
+        // wait a bit of time to allow the timer config to propogate
         // before start the timer again.
 
         setTimeout(() => {
@@ -228,7 +243,7 @@ export class SpeedThrowing extends LitElement {
   _handleCustomPause() {
     return (event) => {
       if (typeof event.detail === 'string' && event.detail === this._pauseBtnValue) {
-        this._timerID = 'doing';
+        this._timerMode = 'doing';
 
         if (this._repCount < this._repetitions); {
           // We've just finished throwing but we've still got more
@@ -244,14 +259,15 @@ export class SpeedThrowing extends LitElement {
   _handleTimerChange() {
     return (event) => {
       const ttElement = event.target
-      const { state, timerid } = event.target;
+      const state = event.target.state;
+      const timerid = event.target['timer-id'];
 
       switch (state) {
         case 'ending':
           break;
 
         case 'ended':
-          this._timerID = (timerid === 'doing')
+          this._timerMode = (timerid === 'doing')
             ? 'waiting'
             : 'doing';
           if (timerid === 'waiting') {
@@ -269,9 +285,9 @@ export class SpeedThrowing extends LitElement {
 
         case 'pause':
           if (timerid === 'waiting') {
-            this._timerID = 'doing';
-            // User wants to start their next pot in before the end of
-            // the intermission.
+            this._timerMode = 'doing';
+            // User wants to start their next pot immediatly, before
+            // the end of the intermission.
             // That's fine.
             this._triggerTimerRestart(ttElement);
           }
@@ -386,7 +402,10 @@ export class SpeedThrowing extends LitElement {
   };
 
   render() {
-    const timerLabel = getTimerlabel(this._type, this._repCount, this._repetitions);
+    const timerLabel = (this._timerMode === 'waiting')
+      ? getWaitinglabel(this._type, this._repCount)
+      : getTimerlabel(this._type, this._repCount, this._repetitions);
+
     const timerHead = getWrappingLabel(timerLabel);
 
     return html`
@@ -410,21 +429,24 @@ export class SpeedThrowing extends LitElement {
         ${(this._confirmed === true) ? this._iWillBe : ''}
 
         ${(this._confirmed === true && this._repCount <= this._repetitions)
-          ? html`<talking-timer
+          ? html`
+            <talking-timer
               id="speed-throwing-timer"
               .duration="${this._duration}"
-              end-message="Hands off your pots"
+              end-message="${this._endMsg}"
               .label="${timerLabel}"
               merge-both
               ?no-end-chime=${this._noExtras || this._noEndChime}
-              ?no-say-end=${this._noExtras}
+              ?no-say-end=${this._noExtras || this._endMsg === ''}
               ?no-say-start=${this._noExtras}
               .pause-btn-txt="${this._pauseBtnTxt}"
               .pause-btn-value="${this._pauseBtnValue}"
               .say=${this._say}
               .say-data=${ifDefined(this._sayExtra)}
-              .timer-id="${this._timerID}"
-              voice="catherine"><h2>${timerHead}</talking-timer>`
+              .timer-id="${this._timerMode}"
+              voice="catherine">
+              <h2>${timerHead}</h2>
+            </talking-timer>`
           : ''
         }
         ${(this._repCount > this._repetitions)
@@ -478,6 +500,21 @@ export class SpeedThrowing extends LitElement {
         padding: 0.5rem 0.5rem 0 0.5rem;
         text-align: center;
         text-wrap: pretty;
+      }
+      .special-btn {
+        font-size: 1.125rem;
+        font-weight: bold;
+        padding: 0.5rem 1rem;
+      }
+      .abort-btn {
+        background-color: var(--st-btn-bg-colour--abort, rgb(150, 0, 0));
+        border: 0.05rem solid var(--st-btn-colour--abort, #fff);
+        color: var(--st-btn-colour--abort, #fff);
+      }
+      .reset-btn {
+        background-color: var(--st-btn-bg-colour--reset, rgb(0, 100, 0));
+        border: 0.05rem solid var(--st-btn-colour--abort, #fff);
+        color: var(--st-btn-colour--abort, #fff);
       }
     `;
   }

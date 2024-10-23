@@ -115,11 +115,11 @@ export const getHumanOption = (options, value) => {
     : '';
 };
 
-export const getTimerlabel = (type, count, total) => `${getTypeLabel(type)} number ${count} of ${total}`;
-
 export const getTypeLabel = (type) => type.substring(0,1).toUpperCase() + type.substring(1, (type.length - 1));
 
-export const getWaitinglabel = (type, count) => html`Waiting to start ${getTypeLabel(type)} number ${count}`;
+export const getTimerlabel = (type, count, total) => `${getTypeLabel(type)} number ${count} of ${total}`;
+
+export const getWaitinglabel = (type, count) => `Waiting to start ${getTypeLabel(type)} number ${count}`;
 
 export const getWaitingSayData = (type, time) => {
   const output = [];
@@ -147,8 +147,10 @@ export const getWaitingSayData = (type, time) => {
 
 export const getWrappingLabel = (label) => {
   const post = label.replace(/^.*?(?=[0-9]+ of [0-9]+$)/i, '');
-
-  return html`${label.replace(post, '')}<br />${post}`
+  const pre = label.replace(post, '');
+  return (pre.trim() !== '')
+    ? html`${pre}<br />${post}`
+    : label;
 }
 
 export const iWillBe = (who, reps, duration, intermission, type, timerOptions) => {

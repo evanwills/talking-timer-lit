@@ -10,7 +10,8 @@
  */
 export const isObj = (input) => (Object.prototype.toString.call(input) === '[object Object]');
 
-export const isNum = (input) => (typeof input === 'number' && !Number.isNaN(input) && Number.isFinite(input));
+export const isNum = (input) => (typeof input === 'number'
+    && !Number.isNaN(input) && Number.isFinite(input));
 
 export const makeNullNum = (input, preceeding = null, max = 59) => {
   const t = typeof input;
@@ -41,50 +42,56 @@ export const makeNullNum = (input, preceeding = null, max = 59) => {
   return null;
 }
 
-export const setLocalValue = (key, value) => {
-  if (typeof localStorage !== 'undefined') {
-    localStorage.setItem(key, value);
-  }
+const _setLocalVal = (key, value) => {
+  localStorage.setItem(key, value);
 };
 
-export const getLocalValue = (key, defaultVal, type = 'string') => {
-  if (typeof localStorage !== 'undefined') {
-    let output = localStorage.getItem(key);
+const _getLocalVal = (key, defaultVal, type = 'string') => {
+  let output = localStorage.getItem(key);
 
-    if (output !== null) {
-      const t = typeof output;
-      if (typeof output === type) {
-        return output;
-      }
-      if (t === 'string') {
-        switch (type.substring(0,4).toLowerCase()) {
-          case 'numb': // number
-          case 'int':
-            return parseInt(output, 10);
-
-          case 'floa': // floating point number
-            return parseFloat(output);
-
-          case 'bool':
-            return (output.toLowerCase().trim() === 'true');
-
-          case 'arra': // array
-          case 'json':
-            try {
-              return JSON.parse(output);
-            } catch (e) {
-              console.error('could not parse JSON from localStorage prop: ')
-            }
-        }
-      }
+  if (output !== null) {
+    const t = typeof output;
+    if (typeof output === type) {
       return output;
     }
+    if (t === 'string') {
+      switch (type.substring(0,4).toLowerCase()) {
+        case 'numb': // number
+        case 'int':
+          return parseInt(output, 10);
 
-    setLocalValue(key, defaultVal);
+        case 'floa': // floating point number
+          return parseFloat(output);
+
+        case 'bool':
+          return (output.toLowerCase().trim() === 'true');
+
+        case 'arra': // array
+        case 'json':
+          try {
+            return JSON.parse(output);
+          } catch (e) {
+            console.error('could not parse JSON from localStorage prop: ')
+          }
+      }
+    }
+    return output;
   }
 
-  return defaultVal;
+  setLocalValue(key, defaultVal);
 };
+
+const _dummyGetLocalVal = (_key, defaultVal, _type = 'string') => defaultVal;
+
+const _dummySetLocalVal = (_key, _value) => {};
+
+export const setLocalValue = (typeof localStorage !== 'undefined')
+  ? _setLocalVal
+  : _dummySetLocalVal;
+
+export const getLocalValue = (typeof localStorage !== 'undefined')
+  ? _getLocalVal
+  : _dummyGetLocalVal;
 
 export const getTimingMsg = (duration) => {
   const seconds = (duration / 1000);

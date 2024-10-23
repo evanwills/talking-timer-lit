@@ -7,6 +7,7 @@ export const getMainBtn = (state, clicker, no, btnTxt) => {
   // console.group('getMainBtn()');
   // console.log('state:', state);
   // console.log('clicker:', clicker);
+  // console.log('btnTxt:', btnTxt);
   // console.groupEnd();
 
   switch (state) {

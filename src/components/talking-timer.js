@@ -670,7 +670,8 @@ export class TalkingTimer extends LitElement {
     if (this.state !== 'running') {
       throw new Error(stateError('ended', 'running', this.state));
     }
-    const noExtra = (silentEnd === true || (this.noEndChime === true && this.noSayEnd === true));
+
+    const noExtra = (silentEnd === true || (this.noEndChime === true && (this.noSayEnd === true || this.endMessage === '')));
 
     this._setState((noExtra === false) ? 'ending' : 'ended');
 
@@ -903,10 +904,12 @@ export class TalkingTimer extends LitElement {
   }
 
   async _startTimer() {
-    if (this.state !== 'ready' && this.state !== 'ended') {
+    if (['ready', 'ended', 'starting'].includes(this.state) === false) {
       throw new Error(stateError('start', 'ready" or "endend', this.state));
     }
-    this._doStartup();
+    if (this.state !== 'starting') {
+      this._doStartup();
+    }
   }
 
   _tryToSayNext() {
@@ -917,6 +920,46 @@ export class TalkingTimer extends LitElement {
       }
       this._getNextMsg();
     }
+  }
+
+  _getMainBtnData() {
+    let txt = '';
+    let val = '';
+
+    switch (this.state) {
+      case 'ready':
+        txt = this.startBtnTxt;
+        // val = this.startBtnValue;
+        break;
+
+      case 'running':
+        if (this.noPause === false) {
+          txt = this.pauseBtnTxt;
+          val = this.pauseBtnValue;
+        }
+        break;
+
+      case 'paused':
+        txt = 'Resume';
+        break;
+
+      case 'ended':
+        txt = 'Restart';
+        break;
+
+      default:
+        return null;
+    }
+
+    if (txt === '') {
+      return null;
+    }
+
+    if (val === '') {
+      val = txt.toLocaleLowerCase();
+    }
+
+    return { txt, val };
   }
 
   //  END:  private methods
@@ -948,10 +991,14 @@ export class TalkingTimer extends LitElement {
       reset: this.noReset,
       restart: this.noRestart,
     };
-    const btnTxt = {
-      start: this.startBtnTxt,
-      pause: this.pauseBtnTxt,
-    }
+    const mainBtn = this._getMainBtnData();
+
+
+    console.group(this._ePre('render'));
+    console.log('this.say:', this.say);
+    console.log('this.sayData:', this.sayData);
+    console.groupEnd();
+
     return html`
       <div class="wrap" @keyup=${this._keyUp}>
         <header>
@@ -967,10 +1014,13 @@ export class TalkingTimer extends LitElement {
             : ''
           }
         </main>
-        <footer>
+        <footer @click=${this._btnClick}>
           ${(this.state === 'unset')
             ? html`<p>Not enough data</p>`
-            : getMainBtn(this.state, this._btnClick, no, btnTxt)
+            : (mainBtn !== null)
+              ? html`<button accesskey="s" class="btn btn--${mainBtn.val}" .value="${mainBtn.val}" @click=${this._btnClick}>${mainBtn.txt}</button>`
+              : ''
+            // : getMainBtn(this.state, this._btnClick, no, btnTxt)
           }
           ${(this.state === 'paused' && no.restart !== true)
             ? getOtherBtn('Restart', this._btnClick)
@@ -1011,6 +1061,7 @@ export class TalkingTimer extends LitElement {
       .btn {
         border-radius: var(--tt-btn-bdr-radius, 0);
         border: var(--tt-border, 0.05rem solid #000);
+        cursor: pointer;
         flex-grow: 1;
         font-family: var(--st-btn-font, verdana, arial, helvetica, sans-serif);
         font-weight: bold;

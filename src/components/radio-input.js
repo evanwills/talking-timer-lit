@@ -72,33 +72,33 @@ export class RadioInput extends LitElement {
   static get styles() {
     return css`
         li {
+          align-items: center;
           border-bottom: 0.05rem solid #fff;
-          margin: 0;
-          padding: 0;
           display: flex;
           flex-direction: column;
           flex-wrap: wrap;
-          align-items: center;
           justify-content: flex-start;
+          margin: 0;
+          padding: 0;
           text-align: start;
         }
         span.label {
           display: inline-block;
-          padding: 0.5rem 1rem;
           min-width: 11rem;
+          padding: 0.5rem 1rem;
         }
         ul {
-          list-style-type: none;
-          padding: 0;
-          margin: 0;
-          display: flex;
           border: 0.05rem solid #fff;
           border-radius: 5rem;
+          display: flex;
+          list-style-type: none;
+          margin: 0;
+          padding: 0;
         }
         ul li {
-          padding: 0;
-          margin: 0;
           border: none;
+          margin: 0;
+          padding: 0;
         }
         input {
           border: 0 !important;
@@ -124,6 +124,10 @@ export class RadioInput extends LitElement {
           display: inline-block;
           cursor: pointer;
           line-height: 1.3rem;
+        }
+        input:focus + label {
+          outline: 0.1rem solid #fff;
+          outline-offset: 0.2rem;
         }
         input:checked + label {
           background-color: #fff;
