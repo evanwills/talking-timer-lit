@@ -24,6 +24,7 @@ import { getVoiceName, saySomething } from '../utils/speach.utils';
 import './radio-input';
 import './talking-timer';
 import './speed-throwing-config';
+import ComponentComms from '../utils/component-comms/ComponentComms.class';
 
 const endMsg = 'Hands off your pots';
 const endCentering = 'You should be finishing centering and opening up';
@@ -106,6 +107,7 @@ export class SpeedThrowing extends LitElement {
     this._ePre = getEpre('<speed-throwing>');
     this._tmp = {};
     this._type = 'Cylinders';
+    this._comms = new ComponentComms(true);
 
     this._confirmed = getLocalValue('st-confirmed', false, 'bool');
     this._doCylinders = getLocalValue('st-cylinders', true, 'bool');
@@ -413,6 +415,7 @@ export class SpeedThrowing extends LitElement {
         <p>
           ${(this._state !== 'running')
             ? html`<speed-throwing-config
+                .comms=${this._comms}
                 ?do-cylinders="${this._doCylinders}"
                 .duation="${this._totalMilli}"
                 .intermission="${this._intermission}"
@@ -432,6 +435,7 @@ export class SpeedThrowing extends LitElement {
           ? html`
             <talking-timer
               id="speed-throwing-timer"
+              .comms=${this._comms}
               .duration="${this._duration}"
               end-message="${this._endMsg}"
               .label="${timerLabel}"

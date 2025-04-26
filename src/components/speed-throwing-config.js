@@ -4,6 +4,7 @@ import { LitElement, css, html } from 'lit';
 import { getBtn, getRepOptions, iWillBe, makeInt } from '../utils/speed-throwing.utils';
 import { getRadio, getSelect } from './talking-timer.renderers';
 import { getEpre } from '../utils/talking-timer.utils';
+import ComponentComms from '../utils/component-comms/ComponentComms.class';
 
 const boolOptions = [
   { label: 'No', value: 'true' },
@@ -93,6 +94,7 @@ const reps = getRepOptions();
  */
 export class SpeedThrowingConfig extends LitElement {
   static properties = {
+    comms: { type: ComponentComms, attribute: 'comms' },
     doCylinders: { type: Boolean, attribute: 'do-cylinders' },
     duration: { type: Number },
     intermission: { type: Number },
@@ -218,6 +220,11 @@ export class SpeedThrowingConfig extends LitElement {
             { bubbles: true, composed: true, detail },
           ),
         );
+
+        console.log('typeof this.comms.dispatch:', typeof this.comms.dispatch);
+        console.log('detail:', detail);
+
+        this.comms.dispatch('confirmconfig', detail);
         break;
 
       case 'duration':

@@ -15,6 +15,7 @@ import { getVoiceName, saySomething } from '../utils/speach.utils';
 import { playEndChime } from '../utils/sound.utils';
 // import playEndChime from '../utils/play-tone';
 import './time-display';
+import ComponentComms from '../utils/component-comms/ComponentComms.class';
 
 /**
  * <talking-timer> is an
@@ -38,6 +39,8 @@ export class TalkingTimer extends LitElement {
      */
     autoReset: { type: Number, attribute: 'auto-rest' },
     autoStartAfter: { type: Number, attribute: 'auto-start-after' },
+
+    comms: { type: ComponentComms },
 
     /**
      * The number of times the button has been clicked.
@@ -368,6 +371,7 @@ export class TalkingTimer extends LitElement {
     // START: non-reactive properties
 
     this._autoStartID = null;
+
     // this._defaultVoice = 'English (Australia)';
     this._defaultVoice = 'Catherine, James, English (Australia), Zira';
 
@@ -460,6 +464,10 @@ export class TalkingTimer extends LitElement {
 
     //  END:  non-reactive properties
     // ----------------------------------------------------
+  }
+
+  handleConfigUpdate(config) {
+
   }
 
   // ======================================================
