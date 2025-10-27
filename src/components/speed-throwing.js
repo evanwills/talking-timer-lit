@@ -123,6 +123,8 @@ export class SpeedThrowing extends LitElement {
     this._breakID = null;
     this._defaultVoice = 'Catherine, James, English (Australia), Zira';
     this._duration = timeObjToString(millisecondsToTimeObj(this._totalMilli));
+    this._endCentering = endCentering;
+    this._endOpening = endOpening;
     this._endMsg = endMsg;
     this._inRestart = false;
     this._setType();

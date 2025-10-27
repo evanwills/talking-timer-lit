@@ -40,6 +40,12 @@ export class TalkingTimer extends LitElement {
     autoReset: { type: Number, attribute: 'auto-rest' },
     autoStartAfter: { type: Number, attribute: 'auto-start-after' },
 
+    /**
+     * comms is used to pass (via comms events) between components
+     * that are directly connected through the DOM tree.
+     *
+     * @property {ComponentComms} comms
+     */
     comms: { type: ComponentComms },
 
     /**
@@ -136,7 +142,7 @@ export class TalkingTimer extends LitElement {
      *
      * @property {boolean} noSayEnd
      */
-    noSayEnd: { type: Boolean, attribute: 'merge' },
+    noSayEnd: { type: Boolean, attribute: 'no-say-end' },
 
     /**
      * Whether or not to say the start phrase
@@ -173,7 +179,7 @@ export class TalkingTimer extends LitElement {
      *
      * @property {string} pauseBtnValue
      */
-    pauseBtnValue: { type: String, attribute: 'pausebtnvalue' },
+    pauseBtnValue: { type: String, attribute: 'pause-btn-value' },
 
     /**
      * `priority` sets which announcements are discarded and which
@@ -181,12 +187,12 @@ export class TalkingTimer extends LitElement {
      * time.
      *
      * To reduce the amount of talking, announcements can only be
-     * made if they are seven _seconds later or earlier than another
+     * made if they are seven seconds later or earlier than another
      * anouncement. By default fraction anouncements have priority
-     * e.g. when the timer is set to 3 _minutes, the "Half way"
+     * e.g. when the timer is set to 3 minutes, the "Half way"
      * announcement is also the same as the "One minute, thirty
-     * _seconds to go" anouncement so the "Half way" announcement
-     * is spoken but the "One minute, thirty _seconds to go." is
+     * seconds to go" anouncement so the "Half way" announcement
+     * is spoken but the "One minute, thirty seconds to go." is
      * skipped.
      *
      * `priority` options:
@@ -223,9 +229,12 @@ export class TalkingTimer extends LitElement {
      * A string that will be parsed to determin which intervals are
      * to be spoken
      *
-     * > __Note:__ If both `say` and `sayData` are present, the value
-     * >           from `say` will be ignored and `sayData` will be
-     * >           used.
+     * > __Note:__ If both `say` and `sayData` are present and
+     * >           `merge-both` is absent, the value from `sayData`
+     * >           will be used and `say` will be ignored.
+     * >           If `say` and `sayData` *AND* `merge-both` are
+     * >           present, `sayData` will be merged into the normal
+     * >           `say` messages.
      *
      * > __Note also:__ If both `say` and `sayData` are empty, an
      * >           error will be thrown. (We can't have a talking
@@ -242,9 +251,12 @@ export class TalkingTimer extends LitElement {
      * time from end the message is to be announced and the message
      * is the text that will be converted to speach and announced.
      *
-     * > __Note:__ If both `sayData` and `say` are present, the value
-     * >           from `sayData` will be used and `say` will be
-     * >           ignored.
+     * > __Note:__ If both `sayData` and `say` are present and
+     * >           `merge-both` is absent, the value from `sayData`
+     * >           will be used and `say` will be ignored.
+     * >           If `sayData` and `say` *AND* `merge-both` are
+     * >           present, `sayData` will be merged into the normal
+     * >           `say` messages.
      *
      * > __Note also:__ If both `sayData` and `say` are empty, an
      * >           error will be thrown. (We can't have a talking
@@ -461,13 +473,8 @@ export class TalkingTimer extends LitElement {
     this._utterance.volume = 1;
     this._utterance.rate = 1;
 
-
     //  END:  non-reactive properties
     // ----------------------------------------------------
-  }
-
-  handleConfigUpdate(config) {
-
   }
 
   // ======================================================
@@ -970,6 +977,26 @@ export class TalkingTimer extends LitElement {
     return { txt, val };
   }
 
+  _handleConfigUpdate(config) {
+
+  }
+
+  _handleSayDataUpdate(data) {
+
+  }
+
+  _handleSayListUpdate(data) {
+
+  }
+
+  _handleEndMsgUpdate(data) {
+
+  }
+
+  _handleDurationUpdate(data) {
+
+  }
+
   //  END:  private methods
   // ======================================================
   // START: lifecycle methods
@@ -980,6 +1007,12 @@ export class TalkingTimer extends LitElement {
 
     // this._parseAttributes();
     this.getRootNode().addEventListener('keyup', this._keyUp);
+
+    this.comms.addListener('confirmconfig', this.timerID, this._handleConfigUpdate);
+    this.comms.addListener('daydata', this.timerID, this._handleSayDataUpdate);
+    this.comms.addListener('endmsg', this.timerID, this._handleEndMsgUpdate);
+    this.comms.addListener('saylist', this.timerID, this._handleSayListUpdate);
+    this.comms.addListener('duration', this.timerID, this._handleDurationUpdate);
   }
 
   disconnectedCallback() {
@@ -987,6 +1020,7 @@ export class TalkingTimer extends LitElement {
     this.getRootNode().removeEventListener('keyup', this._keyUp);
     this.state = 'unset';
 
+    this.comms.removeListenersById(this.timerID);
   }
 
   //  END:  lifecycle methods
