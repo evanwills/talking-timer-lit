@@ -221,9 +221,6 @@ export class SpeedThrowingConfig extends LitElement {
           ),
         );
 
-        console.log('typeof this.comms.dispatch:', typeof this.comms.dispatch);
-        console.log('detail:', detail);
-
         this.comms.dispatch('confirmconfig', detail);
         break;
 

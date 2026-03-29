@@ -201,6 +201,7 @@ export class SpeedThrowing extends LitElement {
     this._pauseBtnValue = `pause`;
     this._say = rawSay;
     this._sayExtra = getDoingSayData(this._totalMilli);
+    this._comms.dispatch('saydata', { say: this._say, sayData: this._sayExtra });
   }
 
   _setWaitingVals() {
@@ -405,6 +406,67 @@ export class SpeedThrowing extends LitElement {
     };
   };
 
+  //  END:  private methods
+  // ======================================================
+  // START: lifecycle methods
+
+  connectedCallback() {
+    super.connectedCallback();
+    this._confirmed = getLocalValue(
+      'st-confirmed',
+      this._confirmed,
+      'bool',
+    );
+    this._doCylinders = getLocalValue(
+      'st-cylinders',
+      this._doCylinders,
+      'bool',
+    );
+    this._intermission = getLocalValue(
+      'st-intermission',
+      this._intermission,
+      'int',
+    );
+    this._totalMilli = getLocalValue(
+      'st-time',
+      this._totalMilli,
+      'int',
+    );
+    this._repetitions = getLocalValue(
+      'st-repetitions',
+      this._repetitions,
+      'int',
+    );
+    this._noSayHelp = getLocalValue(
+      'st-no-say-help',
+      this._noSayHelp,
+      'bool'
+    );
+    this._noEndChime = getLocalValue(
+      'st-no-end-chime',
+      this._noEndChime,
+      'bool'
+    );
+    this._saySessionStart = getLocalValue(
+      'st-say-session-start',
+      this._saySessionStart,
+      'int',
+    );
+    this._saySessionEnd = getLocalValue(
+      'st-say-session-end',
+      this._saySessionEnd,
+      'int',
+    );
+    this._who = getLocalValue(
+      'st-who',
+      this._who,
+    );
+  }
+
+  //  END:  lifecycle methods
+  // ======================================================
+  // START: render
+
   render() {
     const timerLabel = (this._timerMode === 'waiting')
       ? getWaitinglabel(this._type, this._repCount)
@@ -524,6 +586,9 @@ export class SpeedThrowing extends LitElement {
       }
     `;
   }
+
+  //  END:  render
+  // ======================================================
 };
 
 window.customElements.define('speed-throwing', SpeedThrowing);

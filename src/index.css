@@ -59,6 +59,31 @@ blockquote {
   margin: 1rem 0;
 }
 
+details > h2 {
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  padding-top: 1rem;
+  border-top: var(--tt-border, 0.05rem solid #fff);
+}
+
+summary {
+  cursor: pointer;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+
+#about-speed-throwing {
+  margin: 3rem 0;
+  padding: 1rem 0;
+  border-top: var(--tt-border, 0.05rem solid #fff);
+  border-bottom: var(--tt-border, 0.05rem solid #fff);
+
+}
+
+#about-speed-throwing > summary {
+  font-size: 1.5rem;
+}
+
 @media (prefers-color-scheme: light) {
   :root {
     --tt-colour: #213547;

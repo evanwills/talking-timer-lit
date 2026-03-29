@@ -49,6 +49,11 @@ export class TalkingTimer extends LitElement {
     comms: { type: ComponentComms },
 
     /**
+     * The number of milliseconds that must pass between button clicks
+     */
+    debounceTime: { type: Number },
+
+    /**
      * The number of times the button has been clicked.
      *
      * * If `duration` is a number less than 10000 it will be assumed
@@ -355,6 +360,7 @@ export class TalkingTimer extends LitElement {
     this.always = 'mst';
     this.autoReset = -1;
     this.autoStartAfter = -1;
+    this.debounceTime = 200;
     this.endMessage = 'Your time is up!';
     this.label = '';
     this.noEndChime = false;
@@ -375,7 +381,7 @@ export class TalkingTimer extends LitElement {
     this.startmessage = 'Ready, Set, Go';
     this.selfDestruct = -1;
     this.state = 'unset';
-    this.timerID = '';
+    this.timerID = this.id;
     this.voice = '';
 
 
@@ -388,6 +394,8 @@ export class TalkingTimer extends LitElement {
     this._defaultVoice = 'Catherine, James, English (Australia), Zira';
 
     this._decrementCB = this._getDecrementTimer(this);
+
+    this._debounce = null;
 
     /**
      * ID of set interval used for decrementing time
@@ -620,13 +628,8 @@ export class TalkingTimer extends LitElement {
     if (this.voice !== '') {
       this._voiceName = getVoiceName(this.voice);
     }
-    if (this._voiceName === null) {
-      console.group('Avaliable voices');
-      console.warn(`We were unable to find a voice that matched "${this.voice}"`);
-      console.log('Here is the list of voices available on your system:');
-      console.log(speechSynthesis.getVoices().map((voice) => voice.name));
-      console.groupEnd();
 
+    if (this._voiceName === null) {
       this._voiceName = getVoiceName(this._defaultVoice);
     }
 
@@ -638,37 +641,41 @@ export class TalkingTimer extends LitElement {
   }
 
   _btnClick(event) {
-    const { value } = event.target;
+    const now = Date.now();
 
-    switch (value) {
-      case 'start':
-        this._startTimer();
-        break;
+    if (this._debounce === null || now > this._debounce) {
+      this._debounce = now + this.debounceTime;
+      const { value } = event.target;
 
-      case 'pause':
-        this._pauseTimer();
-        break;
+      switch (value) {
+        case 'start':
+          this._startTimer();
+          break;
 
-      case 'resume':
-        this._resumeTimer();
-        break;
+        case 'pause':
+          this._pauseTimer();
+          break;
 
-      case 'restart':
-        this._restartTimer();
-        break;
+        case 'resume':
+          this._resumeTimer();
+          break;
 
-      case 'reset':
-        this._resetTimer();
-        break;
+        case 'restart':
+          this._restartTimer();
+          break;
 
-      case this.pauseBtnTxt.toLowerCase():
-        this.dispatchEvent(
-          new CustomEvent(
-            'custompause',
-            { bubbles: true, composed: true, detail: this.pauseBtnValue },
-          ),
-        );
+        case 'reset':
+          this._resetTimer();
+          break;
 
+        case this.pauseBtnTxt.toLowerCase():
+          this.dispatchEvent(
+            new CustomEvent(
+              'custompause',
+              { bubbles: true, composed: true, detail: this.pauseBtnValue },
+            ),
+          );
+      }
     }
   }
 
@@ -761,6 +768,10 @@ export class TalkingTimer extends LitElement {
 
   _getDecrementTimer(context) {
     return () => {
+      // console.group('_decrementCB()');
+      // console.log('context.remaining', context.remaining);
+      // console.log('context._lastTime', context._lastTime);
+      // console.log('context._total', context._total);
       const now = Date.now();
       const minus = now - context._lastTime;
       context._lastTime = now;
@@ -775,6 +786,11 @@ export class TalkingTimer extends LitElement {
         : 0;
 
       context._tryToSayNext()
+      // console.log('context.percent', context.percent);
+      // console.log('context._total', context._total);
+      // console.log('context.remaining', context.remaining);
+      // console.log('context._lastTime', context._lastTime);
+      // console.groupEnd();
     };
   }
 
@@ -863,10 +879,12 @@ export class TalkingTimer extends LitElement {
       throw new Error(stateError('pause', 'running', this.state));
     }
     this._setState('paused');
+
     clearInterval(this._intervalID);
+
     this._intervalID = null;
-    this._decrementCB();
-    this._tryToSayNext()
+    // this._decrementCB();
+    // this._tryToSayNext()
   }
 
   _resetData() {
@@ -930,7 +948,6 @@ export class TalkingTimer extends LitElement {
   _tryToSayNext() {
     if (this._nextTime === null || this._nextTime > this.remaining) {
       if (this._nextMsg !== null) {
-        // this._saySomething(this._nextMsg);
         saySomething(this._nextMsg, this._voice, this._voiceName, this._nextRate);
       }
       this._getNextMsg();
@@ -978,23 +995,35 @@ export class TalkingTimer extends LitElement {
   }
 
   _handleConfigUpdate(config) {
-
+    this.duration = config.duration;
+    this.noEndChime = config.noEndChime;
+    this.noSayEnd = config.noSayEnd;
+    this.noSayStart = config.noSayStart;
+    this._parseAttributes();
   }
 
   _handleSayDataUpdate(data) {
-
+    console.group('_handleSayDataUpdate()');
+    console.log('data:', data);
+    console.groupEnd();
   }
 
   _handleSayListUpdate(data) {
-
+    console.group('_handleSayListUpdate()');
+    console.log('data:', data);
+    console.groupEnd();
   }
 
   _handleEndMsgUpdate(data) {
-
+    console.group('_handleEndMsgUpdate()');
+    console.log('data:', data);
+    console.groupEnd();
   }
 
   _handleDurationUpdate(data) {
-
+    console.group('_handleDurationUpdate()');
+    console.log('data:', data);
+    console.groupEnd();
   }
 
   //  END:  private methods
@@ -1008,11 +1037,31 @@ export class TalkingTimer extends LitElement {
     // this._parseAttributes();
     this.getRootNode().addEventListener('keyup', this._keyUp);
 
-    this.comms.addListener('confirmconfig', this.timerID, this._handleConfigUpdate);
-    this.comms.addListener('daydata', this.timerID, this._handleSayDataUpdate);
-    this.comms.addListener('endmsg', this.timerID, this._handleEndMsgUpdate);
-    this.comms.addListener('saylist', this.timerID, this._handleSayListUpdate);
-    this.comms.addListener('duration', this.timerID, this._handleDurationUpdate);
+    this.comms.addListener(
+      'confirmconfig',
+      this.timerID,
+      this._handleConfigUpdate.bind(this),
+    );
+    this.comms.addListener(
+      'saydata',
+      this.timerID,
+      this._handleSayDataUpdate.bind(this)
+    );
+    this.comms.addListener(
+      'endmsg',
+      this.timerID,
+      this._handleEndMsgUpdate.bind(this)
+    );
+    this.comms.addListener(
+      'saylist',
+      this.timerID,
+      this._handleSayListUpdate.bind(this)
+    );
+    this.comms.addListener(
+      'duration',
+      this.timerID,
+      this._handleDurationUpdate.bind(this)
+    );
   }
 
   disconnectedCallback() {
@@ -1034,12 +1083,6 @@ export class TalkingTimer extends LitElement {
       restart: this.noRestart,
     };
     const mainBtn = this._getMainBtnData();
-
-
-    console.group(this._ePre('render'));
-    console.log('this.say:', this.say);
-    console.log('this.sayData:', this.sayData);
-    console.groupEnd();
 
     return html`
       <div class="wrap" @keyup=${this._keyUp}>
