@@ -1,24 +1,15 @@
+import { isNum } from './data.utils';
 
-/**
- * Check whether the input is a plain JavaScript object.
- *
- * @param {unknown} input A value that may be an object
- *
- * @returns {boolean} TRUE if the input is an object (and not NULL
- *                    and not an array).
- *                    FALSE otherwise
- */
-export const isObj = (input) => (Object.prototype.toString.call(input) === '[object Object]');
-
-export const isNum = (input) => (typeof input === 'number'
-    && !Number.isNaN(input) && Number.isFinite(input));
-
-export const makeNullNum = (input, preceeding = null, max = 59) => {
+export const makeNullNum = (
+  input : unknown,
+  preceeding : string | null = null,
+  max : number = 59,
+) : string | null => {
   const t = typeof input;
-  let output = input;
+  let output : number = 0;
 
-  if (typeof output === 'string' && output.trim() !== '') {
-    output = parseInt(output, 10);
+  if (typeof input === 'string' && input.trim() !== '') {
+    output = Number.parseInt(input, 10);
   }
 
   if (isNum(output)) {
@@ -40,60 +31,9 @@ export const makeNullNum = (input, preceeding = null, max = 59) => {
   }
 
   return null;
-}
-
-const _setLocalVal = (key, value) => {
-  localStorage.setItem(key, value);
 };
 
-const _getLocalVal = (key, defaultVal, type = 'string') => {
-  let output = localStorage.getItem(key);
-
-  if (output !== null) {
-    const t = typeof output;
-    if (typeof output === type) {
-      return output;
-    }
-    if (t === 'string') {
-      switch (type.substring(0,4).toLowerCase()) {
-        case 'numb': // number
-        case 'int':
-          return parseInt(output, 10);
-
-        case 'floa': // floating point number
-          return parseFloat(output);
-
-        case 'bool':
-          return (output.toLowerCase().trim() === 'true');
-
-        case 'arra': // array
-        case 'json':
-          try {
-            return JSON.parse(output);
-          } catch (e) {
-            console.error('could not parse JSON from localStorage prop: ')
-          }
-      }
-    }
-    return output;
-  }
-
-  setLocalValue(key, defaultVal);
-};
-
-const _dummyGetLocalVal = (_key, defaultVal, _type = 'string') => defaultVal;
-
-const _dummySetLocalVal = (_key, _value) => {};
-
-export const setLocalValue = (typeof localStorage !== 'undefined')
-  ? _setLocalVal
-  : _dummySetLocalVal;
-
-export const getLocalValue = (typeof localStorage !== 'undefined')
-  ? _getLocalVal
-  : _dummyGetLocalVal;
-
-export const getTimingMsg = (duration) => {
+export const getTimingMsg = (duration : number) : string => {
   const seconds = (duration / 1000);
   let thirdStr = 'minute';
   let sixthStr = '30 seconds';
@@ -119,7 +59,7 @@ export const getTimingMsg = (duration) => {
       + 'place it gently on your ware-board';
 }
 
-export const getSessionCompleteExtMsg = (type) => {
+export const getSessionCompleteExtMsg = (type : 'bowls' | 'cylinders') : string => {
   const typeMsg = {
     cylinders: 'The base inside your pot should be flat; '
       + 'The walls should be straight and vertical; '

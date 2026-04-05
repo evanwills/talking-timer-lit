@@ -1,0 +1,12 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "arrowParens": "always",
+  "bracketSameLine": true,
+  "bracketSpacing": true,
+  "jsdoc": {
+    "separateTagGroups": true
+  },
+  "printWidth": 70,
+  "singleAttributePerLine": true,
+  "singleQuote": true
+}

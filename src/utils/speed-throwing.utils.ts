@@ -1,6 +1,8 @@
-import { html } from 'lit';
-import { isNum } from './general.utils';
+import { html, TemplateResult } from 'lit';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
+import { TDoingSayData, TNumberOptionData } from '../types/generic-types';
+import { isNum } from './data.utils';
+import { ucFirst } from './string.utils';
 
 /**
  * Get the (human readable) amount time for centring a pot
@@ -9,7 +11,7 @@ import { unsafeHTML } from 'lit/directives/unsafe-html.js';
  *
  * @returns {string}
  */
-const getCenteringTime = (time) => {
+const getCenteringTime = (time : number) : string => {
   let third = Math.round((time / 3) / 1000);
 
   if (withinTollerance(third, 60)) {
@@ -50,7 +52,11 @@ const getCenteringTime = (time) => {
   return `${third} minute${mPost} and ${remainder} seconds`;
 };
 
-export const getBtn = (value, label, clickHandler) =>  html`
+export const getBtn = (
+  value : string,
+  label : string,
+  clickHandler : Function
+) : TemplateResult =>  html`
 <button
   class="special-btn ${value}-btn"
   id="ss-${value}"
@@ -60,7 +66,7 @@ export const getBtn = (value, label, clickHandler) =>  html`
   ${label}
 </button>`;
 
-export const getRepOptions = () => {
+export const getRepOptions = () : TNumberOptionData[] => {
   const reps = [];
 
   for (let a = 1; a <= 10; a += 1) {
@@ -74,12 +80,13 @@ export const getRepOptions = () => {
 }
 
 /**
- * Get a list of message to say while a pot is being thrown;
+ * Get a list of advisory messages to say while a pot is being thrown;
  *
- * @param {number} time
- * @returns {{message: string, offset: number}[]}
+ * @param time Total time for each pot.
+ *
+ * @returns An array of messages to assist
  */
-export const getDoingSayData = (time) => {
+export const getDoingSayData = (time : number) : TDoingSayData[] => {
   const output = [
     {
       message: 'Use the whole of your first '
@@ -99,8 +106,9 @@ export const getDoingSayData = (time) => {
 
   if (time > 90000) {
     output.push({
-      message: 'Remember to clean up your rim and remove excess '
-        + 'water before you run out of time',
+      message: 'Remember to clean up your rim and your foot then '
+        + 'remove excess water from inside your pot, before you run '
+        + 'out of time',
       offset: 2500,
     });
   }
@@ -108,20 +116,28 @@ export const getDoingSayData = (time) => {
   return output;
 };
 
-export const getHumanOption = (options, value) => {
+export const getHumanOption = (options : TNumberOptionData[], value : number) => {
   const tmp = options.find((option) => option.value === value);
   return (typeof tmp !== 'undefined')
     ? tmp.label
     : '';
 };
 
-export const getTypeLabel = (type) => type.substring(0,1).toUpperCase() + type.substring(1, (type.length - 1));
+export const getTypeLabel = (type : string) : string => ucFirst(type);
 
-export const getTimerlabel = (type, count, total) => `${getTypeLabel(type)} number ${count} of ${total}`;
+export const getTimerlabel = (
+  type : string,
+  count : number,
+  total : number,
+) : string => `${getTypeLabel(type)} number ${count} of ${total}`;
 
-export const getWaitinglabel = (type, count) => `Waiting to start ${getTypeLabel(type)} number ${count}`;
+export const getWaitinglabel = (type : string, count : number) : string =>
+  `Waiting to start ${getTypeLabel(type)} number ${count}`;
 
-export const getWaitingSayData = (type, time) => {
+export const getWaitingSayData = (
+  type : string,
+  time : number,
+) : TDoingSayData[] => {
   const output = [];
 
   if (time > 60000) {
@@ -145,7 +161,7 @@ export const getWaitingSayData = (type, time) => {
   return output
 };
 
-export const getWrappingLabel = (label) => {
+export const getWrappingLabel = (label : string) : string | TemplateResult => {
   const post = label.replace(/^.*?(?=[0-9]+ of [0-9]+$)/i, '');
   const pre = label.replace(post, '');
   return (pre.trim() !== '')
@@ -153,7 +169,7 @@ export const getWrappingLabel = (label) => {
     : label;
 }
 
-export const iWillBe = (who, reps, duration, intermission, type, timerOptions) => {
+export const iWillBe = (who : string, reps : number, duration : number, intermission : number, type : string, timerOptions : TNumberOptionData[]) => {
   const s = (reps > 1)
     ? 's'
     : '';
@@ -174,10 +190,10 @@ export const iWillBe = (who, reps, duration, intermission, type, timerOptions) =
   `;
 };
 
-export const makeInt = (input) => {
+export const makeInt = (input : unknown) : number => {
   let tmp = input;
   if (typeof tmp === 'string') {
-    tmp = parseInt(tmp, 10);
+    tmp = Number.parseInt(tmp, 10);
   }
   return (isNum(tmp))
     ? tmp
@@ -185,6 +201,9 @@ export const makeInt = (input) => {
 };
 
 
-const withinTollerance = (actual, target, tollerance = 5) => {
-  return (actual >= (target - tollerance) && (actual <= target + tollerance));
-};
+const withinTollerance = (
+  actual : number,
+  target : number,
+  tollerance : number = 5,
+) : boolean => (actual >= (target - tollerance)
+  && (actual <= target + tollerance));

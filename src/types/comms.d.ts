@@ -38,7 +38,7 @@ export type TLogBits = {
 /**
  * Name of the method to use when dispatching a logged event
  */
-export type TDispatcherMode = 'simpleDispatcher' | 'loggingDispatcher'
+export type TDispatcherMode = '_simpleDispatcher' | '_loggingDispatcher'
 
 /**
  * Event dispatcher (behaves much like DOM event dispatch)

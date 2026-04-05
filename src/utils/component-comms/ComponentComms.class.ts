@@ -1,29 +1,22 @@
 import {
   getLimitedLogs,
   getLogBits,
-  isNonEmptyStr,
-  normalise,
-  normaliseID,
-} from './utils.js';
+} from './comms.utils.ts';
+
+import { isNonEmptyStr } from '../data.utils.ts';
+import { normalise, normaliseID } from '../string.utils.ts';
+
+import type {
+  FListener,
+  TDispatcherMode,
+  TEventListeners,
+  TLog,
+  TListenerList,
+  TComponentComms,
+} from '../../types/comms.d.ts';
 
 /**
- * @typedef {import('../types/comms.d.ts').FListener} FListener
- */
-/**
- * @typedef {import('../types/comms.d.ts').TDispatcherMode} TDispatcherMode
- */
-/**
- * @typedef {import('../../types/comms').TEventListeners} TEventListeners
- */
-/**
- * @typedef {import('../types/comms.d.ts').TLog} TLog
- */
-/**
- * @typedef {import('../types/comms.d.ts').TListenerList} TListenerList
- */
-
-/**
- * FileSelectCommunicator provides a way of passing data to another
+ * ComponentCommunicator provides a way of passing data to another
  * part of an application that may be interested in something
  * changing.
  *
@@ -34,8 +27,8 @@ import {
  *
  * In retrospect, I think this is not an ideal pattern. Really this
  * should be rearchitected so that it behaves exactly like DOM events
- * where where a client listens for individual events. Then, when an
- * event is fired only the listeners for that event are called.
+ * where a client listens for individual events. Then, when an event
+ * is fired only the listeners for that event are called.
  *
  * @method disableLogging()   Turn logging __off__ for ComponentComms
  * @method enableLogging()    Turn logging __on__ for ComponentComms
@@ -60,19 +53,19 @@ export class ComponentComms {
   // START: Private properties
 
   /**
-   * @property {TEventListeners}
+   * @property
    */
-  _actions = {};
+  _actions : TEventListeners = {};
 
   /**
-   * @property {TLog[]}
+   * @property {]}
    */
-  _log = [];
+  _log : TLog[] = [];
 
   /**
-   * @property {TDispatcherMode}
+   * @property
    */
-  _dispatcher = 'simpleDispatcher';
+  _dispatcher : TDispatcherMode = '_simpleDispatcher';
 
   //  END:  Private properties
   // ----------------------------------------------------------------
@@ -81,10 +74,10 @@ export class ComponentComms {
   /**
    * Create a FileSelectCommunicator Object and add the root watcher
    *
-   * @param {boolean} logging Whether or not CommponentComms should
-   *                          operate in logging mode or not
+   * @param logging Whether or not CommponentComms should operate in
+   *                logging mode or not
    */
-  constructor(logging = false) {
+  constructor(logging : boolean= false) {
     this._setLogging(logging === true);
   }
 
@@ -96,14 +89,14 @@ export class ComponentComms {
    * Check whether or not a watcher has already been set for the
    * given event and component
    *
-   * @param {string} event Name of the event being dispatched
-   * @param {string} id    ID of the component that is watching for
+   * @param event Name of the event being dispatched
+   * @param id    ID of the component that is watching for
    *                       the given event
    *
-   * @returns {boolean} TRUE there is already a watcher set for the event and
+   * @returns TRUE there is already a watcher set for the event and
    *          component ID. FALSE otherwise.
    */
-  _exists(event, id) {
+  _exists(event : string, id : string) : boolean {
     return (typeof this._actions[event] !== 'undefined'
       && typeof this._actions[event][id] === 'function');
   }
@@ -120,11 +113,11 @@ export class ComponentComms {
    * @returns {string[]} List of IDs of components that were watching
    *                     for the dispatched event
    */
-  _simpleDispatcher(event, data, _src = '') {
+  _simpleDispatcher(event : string, data: any, _src : string = '') : string[] {
     const _event = normalise(event);
 
     if (typeof this._actions[_event] !== 'undefined') {
-      const IDs = Object.keys(this._actions[_event]);
+      const IDs : string[] = Object.keys(this._actions[_event]);
 
       for (const key of IDs) {
         this._actions[_event][key](data);
@@ -140,16 +133,15 @@ export class ComponentComms {
    * Dispatch an event and log the action to the console as well as
    * to an internal log
    *
-   * @param {string} event Name of the event being dispatched
-   * @param {any}    data  Whatever data the dispatcher wanted to
-   *                       send with the event
-   * @param {string} _src  Name of the component that dispatched the
-   *                       event
+   * @param event Name of the event being dispatched
+   * @param data  Whatever data the dispatcher wanted to send with the
+   *              event
+   * @param _src  Name of the component that dispatched the event
    *
-   * @returns {string[]} List of IDs of components that were watching
-   *                     for the dispatched event
+   * @returns List of IDs of components that were watching for the
+              dispatched event
    */
-  _loggingDispatcher(event, data, _src) {
+  _loggingDispatcher(event : string, data: any, _src : string = '') : string[] {
     const { ext, src } = getLogBits(_src);
     const _event = normalise(event);
 
@@ -194,11 +186,11 @@ export class ComponentComms {
    * @return {void}
    */
   _addListenerInner(
-    event,
-    id,
-    watcher,
-    replace = false
-  ) {
+    event : string,
+    id : string,
+    watcher : FListener,
+    replace : boolean = false,
+  ) : void {
     const _event = normalise(event);
     const _id = normaliseID(id);
 
@@ -219,12 +211,9 @@ export class ComponentComms {
   /**
    * Set logging on dispatched event to on or off
    *
-   * @param {boolean} logging Whether or not logging should be
-   *                          enabled or not.
-   *
-   * @return {void}
+   * @param logging Whether or not logging should be enabled or not.
    */
-  _setLogging(logging) {
+  _setLogging(logging : boolean) : void {
     this._dispatcher = (logging === true)
       ? '_loggingDispatcher'
       : '_simpleDispatcher';
@@ -234,12 +223,40 @@ export class ComponentComms {
   // ----------------------------------------------------------------
   // START: Public methods
 
-  enableLogging() {
-    return this._setLogging(true);
-  }
+  enableLogging() { this._setLogging(true); }
 
-  disableLogging() {
-    this._setLogging(false);
+  disableLogging() { this._setLogging(false); }
+
+  /**
+   * Check whether a listener has already been set for a given
+   * event/id pair
+   *
+   * @param event Event name (or list of event names) the watcher
+   *              wants to be called on
+   * @param id    ID associated with the watcher
+   *
+   * @returns TRUE if a watcher already exists for at least one
+   *          event/id pair. FALSE if no watcher has been set for
+   *          any event/id pairs
+   */
+  listenerExists(event : string|string[], id : string) : boolean {
+    const _id = normaliseID(id);
+
+    if (Array.isArray(event)) {
+      for (const ev of event) {
+        const _event = normalise(ev);
+
+        if (this._exists(_event, _id)) {
+          return true;
+        }
+      }
+
+      return false;
+    }
+
+    const _event = normalise(event);
+
+    return this._exists(_event, _id);
   }
 
   /**
@@ -248,15 +265,13 @@ export class ComponentComms {
    *
    * @function addListener
    *
-   * @param {string|string[]} event Type of event that will to
-   *                           dispatch
-   * @param {function} listener A function to be called when an event
-   *                           is dispatched
-   * @param {string}   id      ID of listener so it can be removed or
-   *                           replaced later
-   * @param {boolean}  replace Whether or not to replace existing
-   *                           listener (matched by `id`) with
-   *                           supplied listener
+   * @param event    Type of event that will to dispatch
+   * @param listener A function to be called when an event is
+   *                 dispatched
+   * @param id       ID of listener so it can be removed or replaced
+   *                 later
+   * @param replace  Whether or not to replace existing listener
+   *                 (matched by `id`) with supplied listener
    *
    * @returns {void}
    * @throws {Error} If :
@@ -270,11 +285,11 @@ export class ComponentComms {
    *                   is FALSE
    */
   addListener(
-    event,
-    id,
-    listener,
-    replace = false,
-  ) {
+    event : string|string[],
+    id : string,
+    listener : FListener,
+    replace : boolean = false,
+  ) : void {
     if ((!isNonEmptyStr(event) && !Array.isArray(event))
       || !isNonEmptyStr(id) || (typeof listener !== 'function')
     ) {
@@ -305,12 +320,12 @@ export class ComponentComms {
    * @returns {boolean} TRUE if listener was found and removed.
    *                    FALSE otherwise.
    */
-  removeListener(event, id) {
+  removeListener(event : string, id : string) : boolean {
     const _event = normalise(event);
     const _id = normaliseID(id);
 
     if (this._exists(event, _id) === true) {
-      const tmp = {};
+      const tmp : TListenerList = {};
 
       for (const key of Object.keys(this._actions[_event])) {
         if (key !== _id) {
@@ -342,7 +357,7 @@ export class ComponentComms {
    * @returns {number} The number of listeners that were actually
    *                   removed
    */
-  removeListenersById(id) {
+  removeListenersById(id : string) : number {
     let output = 0;
     const _id = normaliseID(id);
 
@@ -358,35 +373,30 @@ export class ComponentComms {
   /**
    * Dispatch an event with some data
    *
-   * @param {string} event Type of event that triggered the dispatch
-   *                       call
-   * @param {any}    data  Data to dispatch along with event
-   * @param {string} src   Source of the event
-   *
-   * @returns {void}
+   * @param event Type of event that triggered the dispatch call
+   * @param data  Data to dispatch along with event
+   * @param src   Source of the event
    */
-  dispatch(event, data = null, src = '') {
+  dispatch(event : string, data = null, src = '') : void {
     this[this._dispatcher](event, data, src);
   }
 
   /**
    * Get list of logs
    *
-   * @param {string} event      Type of event that triggered the
-   *                            dispatch call
-   * @param {number} limit      Number of log entries that should be
-   *                            returned (Default is 10)
-   * @param {boolean} lastFirst Whether or not logs should be
-   *                            returned ordered newest to oldest
-   *                            or oldest to newest
+   * @param event     Type of event that triggered the dispatch call
+   * @param limit     Number of log entries that should be returned
+                      (Default is 10)
+   * @param lastFirst Whether or not logs should be returned ordered
+                      newest to oldest or oldest to newest
    *
    * @returns {TLog[]} list of logs
    */
   getLogs(
-    event = '',
-    limit = 10,
-    lastFirst = true,
-  ) {
+    event : string = '',
+    limit : number = 10,
+    lastFirst : boolean = true,
+  ) : TLog[] {
     return getLimitedLogs(this._log, event, limit, lastFirst);
   }
 

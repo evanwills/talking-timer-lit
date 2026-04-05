@@ -1,5 +1,10 @@
 
-export const saySomething = (text, voiceSynth, voiceName, rate = 1) => {
+export const saySomething = (
+  text : string,
+  voiceSynth : SpeechSynthesis,
+  voiceName : SpeechSynthesisVoice,
+  rate = 1,
+) : SpeechSynthesisUtterance => {
   const sayThis = new SpeechSynthesisUtterance(text);
 
   if (typeof text !== 'string' || text.trim() !== '') {
@@ -15,7 +20,7 @@ export const saySomething = (text, voiceSynth, voiceName, rate = 1) => {
 };
 
 
-export const getVoiceName = (options) => {
+export const getVoiceName = (options : string) : SpeechSynthesisVoice | null => {
   const _options = options.split(',').map((item) => item.trim().toLowerCase());
 
   const available = speechSynthesis.getVoices().map(
@@ -24,8 +29,8 @@ export const getVoiceName = (options) => {
       name: item.name.trim().toLowerCase() }
     ));
 
-    for (let a = 0; a < _options.length; a += 1) {
-    const tmp = available.find((item) => item.name.includes(_options[a]));
+  for (const _option of _options) {
+    const tmp = available.find((item) => item.name.includes(_option));
     if (typeof tmp !== 'undefined') {
       return tmp.voice;
     }

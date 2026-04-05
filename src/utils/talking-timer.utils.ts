@@ -1,6 +1,6 @@
-import { isObj } from './general.utils';
+import { IStrKeyObj, ITimeObj, TWholePart } from '../types/generic-types';
 
-export const multipliers = {
+export const multipliers : ITimeObj = {
   hours: 3600000,
   minutes: 60000,
   seconds: 1000,
@@ -18,20 +18,23 @@ export const multipliers = {
  *
  * @returns {(method: string, before: boolean|null|string) : string}
  */
-export const getEpre = (componentName, componentID = '') => {
+export const getEpre = (componentName : string, componentID : string = '') => {
   const tail = (componentID !== '')
     ? ` (#${componentID})`
     : '';
 
-  return (method, before = null) => {
+  return (
+    method : string,
+    before : boolean | string | null = null
+  ) : string => {
     const beforeT = typeof before;
     let suffix = '';
 
-    if (beforeT === 'boolean') {
+    if (typeof before === 'boolean') {
       suffix = (before === true)
         ? ' (before)'
         : ' (after)';
-    } else if (beforeT === 'string') {
+    } else if (typeof before === 'string') {
       const _before = before.trim();
 
       if (_before !== '') {
@@ -47,15 +50,15 @@ export const getEpre = (componentName, componentID = '') => {
  * onlyGreaterThanZero() ensures that the most significant field in
  * the returned timeObj is non-zero
  *
- * @param {object} currentValue containing seconds, minutes & hours
+ * @param currentValue containing seconds, minutes & hours
  *                representing the timer's duration
  *
- * @returns {object} object containing only the least significant
+ * @returns object containing only the least significant
  *                fields greater than zero
  */
-export const onlyGreaterThanZero = (currentValue) => {
+export const onlyGreaterThanZero = (currentValue : ITimeObj) => {
   const fields = ['hours', 'minutes', 'seconds', 'tenths'];
-  let tmpValue = {};
+  let tmpValue : IStrKeyObj = {};
   let allTheRest = false;
 
   for (let a = 0; a < 4; a += 1) {
@@ -86,7 +89,11 @@ export const onlyGreaterThanZero = (currentValue) => {
  *                a second) depending on the value of the `timeObj`
  *                attribute
  */
-export const timeObjToString = (timeObj, nonZeroOnly, noTenths = true) => {
+export const timeObjToString = (
+  timeObj : ITimeObj,
+  nonZeroOnly : boolean,
+  noTenths : boolean = true,
+) : string => {
   const tmpTimeObj = (typeof nonZeroOnly !== 'boolean' || nonZeroOnly === true)
     ? onlyGreaterThanZero(timeObj)
     : { ...timeObj };
@@ -124,14 +131,14 @@ export const timeObjToString = (timeObj, nonZeroOnly, noTenths = true) => {
  * timeObjToMilliseconds() converts the values of a time object to
  * milliseconds
  *
- * @param {object} timeObj
+ * @param timeObj
  *
- * @returns {number} number of milliseconds the time object represents
+ * @returns number of milliseconds the time object represents
  */
-export const timeObjToMilliseconds = (timeObj) => {
+export const timeObjToMilliseconds = (timeObj : ITimeObj) : number => {
   const fields = ['tenths', 'seconds', 'minutes', 'hours'];
 
-  const tmpTimeObj = (typeof timeObj.tenths === 'undefined')
+  const tmpTimeObj : ITimeObj = (typeof timeObj.tenths === 'undefined')
     ? { ...timeObj, 'tenths': 0 }
     : { ...timeObj };
 
@@ -148,14 +155,14 @@ export const timeObjToMilliseconds = (timeObj) => {
  * millisecondsToTimeObj() converts the number of milliseconds
  * provided to a timeObj object
  *
- * @param {number} milliseconds
+ * @param milliseconds
  *
- * @returns {object} time object with the form {hours, minutes, seconds, tenths}
+ * @returns time object with the form {hours, minutes, seconds, tenths}
  */
-export const millisecondsToTimeObj = (milliseconds) => {
+export const millisecondsToTimeObj = (milliseconds : number) : ITimeObj => {
   const fields = ['hours', 'minutes', 'seconds', 'tenths'];
 
-  let output = {
+  let output : ITimeObj = {
     hours: 0,
     minutes: 0,
     seconds: 0,
@@ -177,17 +184,21 @@ export const millisecondsToTimeObj = (milliseconds) => {
  * getWholePart() (PURE) converts the number of milliseconds
  * provided into the whole number of units
  *
- * @param {number} input the number of millseconds to be converted
- *                 into approprate time unit
- *                 (e.g. hours, minutes, seconds, tenths of a second)
- * @param {number} multiplier the value used to multiply (or divide
- *                 in this case) the number of milliseconds to get
- *                 the unit value
- * @returns {object} two part object containing the "whole" value for
- *                 the unit and the remaining number of milliseconds
- *                 to be passed to the next unit
+ * @param input      the number of millseconds to be converted
+ *                   into approprate time unit
+ *                   (e.g. hours, minutes, seconds, tenths of a second)
+ * @param multiplier the value used to multiply (or divide in this
+ *                   case) the number of milliseconds to get the
+ *                   unit value
+ *
+ * @returns Two part object containing the "whole" value for the unit
+ *          and the remaining number of milliseconds to be passed to
+ *          the next unit
  */
-export const getWholePart = (input, multiplier) => {
+export const getWholePart = (
+  input : number,
+  multiplier : number,
+) : TWholePart => {
   const wholeVal = Math.floor(input / multiplier);
 
   return {
@@ -196,7 +207,7 @@ export const getWholePart = (input, multiplier) => {
   };
 };
 
-export const validateDurationStr = (str) => {
+export const validateDurationStr = (str : string) : number | false => {
   const regex = /^(?:(?:(?:([0-1]?[0-9]|2[0-4]):)?([0-5]?[0-9]):)?([0-5]?[0-9])|([6-9][0-9]|[1-9][0-9]{2,5}))$/;
   const matches = regex.exec(str);
 
@@ -233,19 +244,17 @@ export const validateDurationStr = (str) => {
  *
  * __NOTE:__ the parsed value of `start` must be less than 24 hours
  *
- * __NOTE ALSO:__ this method also assignes parsed values to object
+ * __NOTE ALSO:__ this method also assigns parsed values to object
  *       properties
  *
- * @param {string} time the string value of the
+ * @param time the string value of the
  *                 element's `start` attribute
  *
- * @returns {boolean} TRUE if hoursMinutesSeconds can be parsed.
+ * @returns TRUE if hoursMinutesSeconds can be parsed.
  *          FALSE otherwise
  */
-export const validateTimeDuration = (time) => {
-  const t = typeof time;
-  switch (t) {
-    case 'number':
+export const validateTimeDuration = (time : number | string) : number | false => {
+  if (typeof time === 'number') {
       if (time > 86400000) {
         return 86400000;
       }
@@ -254,17 +263,19 @@ export const validateTimeDuration = (time) => {
         return time;
       }
       return (time * 1000);
-
-    case 'string':
-      return validateDurationStr(time);
   }
+
+  if (typeof time === 'string') {
+    return validateDurationStr(time);
+  }
+
   return false;
 };
 
 export const getPublicWarning = (
-  action,
-  needed,
-  state,
-  join = 'not ',
-) => `You cannot ${action} <talking-timer> because it is ${join}`
-  + `in a "${needed}" state. Current state is: "${state}"`;
+  action : string,
+  needed : string,
+  state : string,
+  join : string = 'not ',
+) : string => `You cannot ${action} <talking-timer> because it is `
+  + `${join} in a "${needed}" state. Current state is: "${state}"`;

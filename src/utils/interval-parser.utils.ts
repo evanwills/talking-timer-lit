@@ -1,19 +1,24 @@
+import {
+  IParsedIntervalData,
+  TDoingSayData,
+  TIntervalObj,
+  TParsedIntervalDataObj,
+  TSuffixes,
+} from "../types/generic-types";
 import { isObj } from "./general.utils";
 
 /**
  * tooClose() checks whether the current value is within 5 seconds
  * of the previous value
  *
- * @param {number} current value to be tested
+ * @param {} current value to be tested
  * @param {number} previous value to be tested against
  *
  * @returns {boolean} TRUE if within 5 seconds of previous value
  */
-export const tooClose = (current, previous) => {
-  return (current > (previous - 5000) && current < (previous + 5000));
-};
+export const tooClose = (current : number, previous: number) : boolean => (current > (previous - 5000) && current < (previous + 5000));
 
-export const s = (input) => {
+export const s = (input : number) : string => {
   return (input === 0 || input > 1)
     ? 's'
     : '';
@@ -29,12 +34,13 @@ export const s = (input) => {
  * @returns {boolean} TRUE if offset was too close to a previously
  *                seen offset value. FALSE otherwise
  */
-export const tooCloseAny = (offset, previous) => {
+export const tooCloseAny = (offset: number, previous: number[]) : boolean => {
   for (let a = 0; a < previous.length; a += 1) {
     if (tooClose(offset, previous[a]) === true) {
       return true;
     }
   }
+
   return false;
 }
 
@@ -42,12 +48,12 @@ export const tooCloseAny = (offset, previous) => {
  * posMinus() ensures that the value of a subtraction is always
  * positive (or zero)
  *
- * @param {number} a
- * @param {number} b
+ * @param a
+ * @param b
  *
- * @return {number} positive value of a - b
+ * @return positive value of a - b
  */
-export const posMinus = (a, b) => {
+export const posMinus = (a : number, b : number) : number => {
   return (a > b)
     ? a - b
     : b - a;
@@ -57,18 +63,22 @@ export const posMinus = (a, b) => {
  * makeTimeMessage() returns a string that can be passed to the text
  * to web speech API
  *
- * @param {number} offset milliseconds
+ * @param offset milliseconds
  *
- * @returns {string} textual representation of offset
+ * @returns textual representation of offset
  */
-export const makeTimeMessage = (offset, suffix, forceSufix) => {
+export const makeTimeMessage = (
+  offset: number,
+  suffix: string,
+  forceSufix: boolean = false,
+) : string => {
   let output = '';
   let working = offset;
   let comma = '';
 
-  forceSufix = (typeof forceSufix !== 'boolean')
-    ? false
-    : forceSufix;
+  forceSufix = (typeof forceSufix === 'boolean')
+    ? forceSufix
+    : false;
 
   if (working < 20000) {
     // Do not append unit if 10 seconds or less
@@ -77,6 +87,7 @@ export const makeTimeMessage = (offset, suffix, forceSufix) => {
       : (working > 10000)
         ? ' seconds'
         : '';
+
     return Math.round(working / 1000) + tmpSuffix;
   }
 
@@ -110,12 +121,12 @@ export const makeTimeMessage = (offset, suffix, forceSufix) => {
  * makeFractionMessage() returns a string that can be passed to the
  * text to web speech API
  *
- * @param {number} numerator for fraction
- * @param {number} denominator for fraction
+ * @param numerator for fraction
+ * @param denominator for fraction
  *
- * @returns {string} textual representation of the fraction offset
+ * @returns textual representation of the fraction offset
  */
-export const makeFractionMessage = (numerator, denominator, suffixes) => {
+export const makeFractionMessage = (numerator: number, denominator: number, suffixes: any) : string => {
   let fraction = '';
 
   // reduce the denominator to its
@@ -160,11 +171,11 @@ export const makeFractionMessage = (numerator, denominator, suffixes) => {
 /**
  * sortOffsets() sorts a list of offset objects by their offset value
  *
- * @param {array} input list of offset objects to be sorted
+ * @param input list of offset objects to be sorted
  *
- * @returns {array} items are sorted by offset
+ * @returns items are sorted by offset
  */
-export const sortOffsets = (input) => {
+export const sortOffsets = (input : TDoingSayData[]) : TDoingSayData[] => {
   return input.sort((a, b) => {
     if (a.offset < b.offset) {
       return 1;
@@ -180,13 +191,13 @@ export const sortOffsets = (input) => {
  * filterOffsets() removes duplicates an items that are too close
  * to preceeding items
  *
- * @param {array} offsets list of offset objects
+ * @param offsets list of offset objects
  *
- * @returns {array} list of offset objects excluding duplicates and
+ * @returns list of offset objects excluding duplicates and
  *                closely occuring items
  */
-export const filterOffsets = (offsets, max) => {
-  let found = [];
+export const filterOffsets = (offsets : TDoingSayData[], max : number) : TDoingSayData[] => {
+  let found : number[] = [];
 
   return offsets.filter(item => {
     if (found.indexOf(item.offset) === -1
@@ -198,7 +209,7 @@ export const filterOffsets = (offsets, max) => {
     } else {
       return false;
     }
-  })
+  });
 };
 
 /**
@@ -210,7 +221,7 @@ export const filterOffsets = (offsets, max) => {
  * @returns {number} Number of miliseconds to multiply the time
  *                   value to get the duration.
  */
-const getX = (unit) => {
+const getX = (unit : string) : number => {
   switch (unit) {
     case 'm':
       return 60000;
@@ -224,12 +235,16 @@ const getX = (unit) => {
   }
 }
 
-const getNonRelativeMsgs = (intervalObj, milliseconds, suffixes) => {
-  const half = (milliseconds / 2);
-  const interval = (intervalObj.time * 1000);
-  const output = [];
+const getNonRelativeMsgs = (
+  intervalObj : any,
+  milliseconds : number,
+  suffixes : any,
+) : TDoingSayData[] => {
+  const half : number = (milliseconds / 2);
+  const interval : number = (intervalObj.time * 1000);
+  const output : TDoingSayData[] = [];
 
-  for (let offset = interval; offset <= half; offset += interval) {
+  for (let offset : number = interval; offset <= half; offset += interval) {
     output.push(
       sayItemAdapter({
         offset,
@@ -247,14 +262,14 @@ const getNonRelativeMsgs = (intervalObj, milliseconds, suffixes) => {
   return output;
 };
 
-const getRate = (msg) => {
+const getRate = (msg : string) : number => {
   const regex = /^1?[0-9]$/;
   return regex.test(msg)
     ? 1.5
     : 1;
 };
 
-const getRelativeMsgs = (intervalObj, milliseconds, suffix) => {
+const getRelativeMsgs = (intervalObj : TIntervalObj, milliseconds : number, suffix : string) => {
   const output = [];
   let interval = getX(intervalObj.unit);
   let count = 0;
@@ -284,27 +299,27 @@ const getRelativeMsgs = (intervalObj, milliseconds, suffix) => {
   return output;
 };
 
-export const sayItemAdapter = (item) => ({
+export const sayItemAdapter = (item : TDoingSayData) : TDoingSayData => ({
   offset: item.offset,
   message: item.message,
   rate: getRate(item.message),
 });
 
-export const sayListAdapter = (data) => data.map(sayItemAdapter);
+export const sayListAdapter = (data : TDoingSayData[]) : TDoingSayData[] => data.map(sayItemAdapter);
 
 /**
  * Get a list of interval messages based on a multiplier
  *
- * @param {object} intervalObj  interval object parsed from speak
+ * @param intervalObj  interval object parsed from speak
  *                              attribute
- * @param {number} milliseconds number of milliseconds remaining
+ * @param milliseconds number of milliseconds remaining
  *                              for timer
- * @param {string} suffix       string to append to spoken messages
+ * @param suffix       string to append to spoken messages
  *
- * @returns {array} list of interval objects containing offset &
- *                 message properties used for announcing intervals
+ * @returns list of interval objects containing offset &
+ *          message properties used for announcing intervals
  */
-const getMultiplierMsgs = (intervalObj, milliseconds, suffix) => {
+const getMultiplierMsgs = (intervalObj : TIntervalObj, milliseconds : number, suffix : string) : TDoingSayData[] => {
   const output = [];
   const interval = (intervalObj.time * getX(intervalObj.unit));
   const modifier = (intervalObj.relative === 'last')
@@ -330,19 +345,19 @@ const getMultiplierMsgs = (intervalObj, milliseconds, suffix) => {
  *
  * Used for announcing progress in timer
  *
- * @param {object} intervalObj interval object parsed from speak
+ * @param intervalObj interval object parsed from speak
  *                 attribute
- * @param {number} milliseconds number of milliseconds remaining
+ * @param milliseconds number of milliseconds remaining
  *                 for timer
- * @param {object} suffixes    strings to append to spoken messages
+ * @param suffixes    strings to append to spoken messages
  *
- * @returns {array} list of interval objects containing offset &
+ * @returns list of interval objects containing offset &
  *                 message properties used for announcing intervals
  */
 export const getTimeOffsetAndMessage = (
-  intervalObj,
-  milliseconds,
-  suffixes,
+  intervalObj : TIntervalObj,
+  milliseconds : number,
+  suffixes : { first: string, last: string },
 ) => {
   const suffix = (intervalObj.relative === 'first')
     ? suffixes.first
@@ -369,6 +384,7 @@ export const getTimeOffsetAndMessage = (
   const offset = (intervalObj.relative !== 'first')
     ? interval
     : (milliseconds - interval);
+
   return [
     sayItemAdapter({
       offset: offset,
@@ -384,26 +400,30 @@ export const getTimeOffsetAndMessage = (
  *
  * Used for announcing progress in timer
  *
- * @param {object} suffixes    strings to append to spoken messages
- * @param {object} intervalObj interval object parsed from speak
+ * @param suffixes    strings to append to spoken messages
+ * @param intervalObj interval object parsed from speak
  *                 attribute
- * @param {number} milliseconds number of milliseconds remaining
+ * @param milliseconds number of milliseconds remaining
  *                 for timer
  *
- * @returns {array} list of interval objects containing offset &
- *                 message properties used for announcing intervals
+ * @returns list of interval objects containing offset &
+ *          message properties used for announcing intervals
  */
 export const getFractionOffsetAndMessage = (
-  intervalObj,
-  milliseconds,
-  suffixes,
+  intervalObj : TIntervalObj,
+  milliseconds : number,
+  suffixes : TSuffixes,
 ) => {
   let interval = 0;
   const half = milliseconds / 2;
 
   interval = milliseconds / intervalObj.denominator;
   if (intervalObj.denominator === 2) {
-    return [{ message: 'Half way', offset: half, raw: intervalObj.raw }];
+    return [{
+      message: 'Half way',
+      offset: half,
+      raw: intervalObj.raw,
+    }];
   }
 
   let offsets = [];
@@ -424,14 +444,14 @@ export const getFractionOffsetAndMessage = (
       offsets.push(
         sayItemAdapter({
           offset: posMinus(minus, (interval * a)),
-          message: makeFractionMessage(a, intervalObj.denominator) + suffix,
+          message: makeFractionMessage(a, intervalObj.denominator, suffixes) + suffix,
           // raw: intervalObj.raw,
         }),
       );
     }
   } else {
     for (let a = 1; a <= (count / 2); a += 1) {
-      const message = makeFractionMessage(a, intervalObj.denominator);
+      const message = makeFractionMessage(a, intervalObj.denominator, suffixes);
       offsets.push(
         sayItemAdapter({
           offset: (milliseconds - (interval * a)),
@@ -466,13 +486,13 @@ export const getFractionOffsetAndMessage = (
  * Process the matches made by a regular expression, into something
  * that the rest of the parser can use.
  *
- * @param {mixed}   matches patterns matched by a regular expression
- * @param {boolean} exclude
+ * @param matches patterns matched by a regular expression
+ * @param exclude
  *
- * @returns {object}
+ * @returns
  */
-const intervalAdapter = (matches, exclude) => {
-  const tmp = matches.groups;
+const intervalAdapter = (matches : RegExpExecArray, exclude : boolean) => {
+  const tmp : IParsedIntervalData = matches.groups;
   const allEvery = (typeof tmp.allEvery !== 'undefined')
     ? tmp.allEvery.toLocaleLowerCase()
     : '';
@@ -485,7 +505,7 @@ const intervalAdapter = (matches, exclude) => {
     every: (allEvery === 'every' && relative !== ''),
     exclude,
     isFraction: false,
-    multiplier: (typeof tmp.multiplyer !== 'undefined' && typeof (tmp.multiplyer * 1) === 'number')
+    multiplier: (tmp.multiplyer === 'string' && typeof (tmp.multiplyer * 1) === 'number')
       ? Number.parseInt(tmp.multiplyer, 10)
       : 1,
     relative,
@@ -504,7 +524,12 @@ const intervalAdapter = (matches, exclude) => {
   return output;
 }
 
-const parseFraction = (matches, interval, durationMilli, post) => {
+const parseFraction = (
+  matches : IParsedIntervalData,
+  interval : TIntervalObj,
+  durationMilli : number,
+  post : TSuffixes,
+) => {
   // item is a fraction
   const denominator = Number.parseInt(matches.denominator, 10);
 
@@ -516,8 +541,7 @@ const parseFraction = (matches, interval, durationMilli, post) => {
   }
 
   return getFractionOffsetAndMessage(interval, durationMilli, post);
-
-}
+};
 
 /**
  * parseRawIntervals() builds an array of objects which in turn can
@@ -531,20 +555,20 @@ const parseFraction = (matches, interval, durationMilli, post) => {
  * @returns {array}
  */
 export const parseRawIntervals = (
-  durationMilli,
-  rawIntervals,
+  durationMilli : number,
+  rawIntervals : string,
   omit = false,
   priority = 'fraction',
-  suffixes = null,
+  suffixes : TSuffixes | null = null,
 ) => {
   const post = (isObj(suffixes))
     ? suffixes
     : { first: ' gone', last: ' to go', half: 'Half way' };
   const regex = /(?<=^|\s)(?<allEvery>all|every)?[_-]?(?<multiplyer>[0-9]+)?[_-]?(?<relative>(?:la|fir)st)?[_-]?(?:(?<hmsNum>[1-9][0-9]*)[_-]?(?<hmsUnit>[smh]?)|(?<numerator>[1-9])?[_-]?1\/(?<denominator>[2-9]|10))(?=\s|$)/ig;
   let matches;
-  let timeIntervals = [];
-  let fractionIntervals = [];
-  let orderIntervals = [];
+  let timeIntervals : TDoingSayData[] = [];
+  let fractionIntervals : TDoingSayData[] = [];
+  let orderIntervals : TDoingSayData[] = [];
 
   if (typeof rawIntervals !== 'string' || rawIntervals === '') {
     return [];
@@ -554,7 +578,7 @@ export const parseRawIntervals = (
     : false;
 
   while ((matches = regex.exec(rawIntervals)) !== null) {
-    const tmp = matches.groups;
+    const tmp : IParsedIntervalData = matches.groups;
     const interval = intervalAdapter(matches, exclude);
 
     if (typeof tmp.denominator !== 'undefined') {

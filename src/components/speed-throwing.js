@@ -6,7 +6,7 @@ import { renderEndMsg } from './talking-timer.renderers';
 import {
   getLocalValue,
   setLocalValue,
-} from '../utils/general.utils';
+} from '../utils/local-storage.utils.ts';
 import {
   getBtn,
   getDoingSayData,
@@ -19,12 +19,12 @@ import {
   getWrappingLabel,
   iWillBe,
   makeInt,
-} from '../utils/speed-throwing.utils';
-import { getVoiceName, saySomething } from '../utils/speach.utils';
+} from '../utils/speed-throwing.utils.ts';
+import { getVoiceName, saySomething } from '../utils/speach.utils.ts';
+import ComponentComms from '../utils/component-comms/ComponentComms.class.ts';
 import './radio-input';
 import './talking-timer';
 import './speed-throwing-config';
-import ComponentComms from '../utils/component-comms/ComponentComms.class';
 
 const endMsg = 'Hands off your pots';
 const endCentering = 'You should be finishing centering and opening up';
