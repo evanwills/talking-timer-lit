@@ -5,6 +5,7 @@ import {
   TParsedIntervalDataObj,
   TSuffixes,
 } from "../types/generic-types";
+import { forceInt, isNum } from "./data.utils";
 import { isObj } from "./general.utils";
 
 /**
@@ -491,7 +492,10 @@ export const getFractionOffsetAndMessage = (
  *
  * @returns
  */
-const intervalAdapter = (matches : RegExpExecArray, exclude : boolean) => {
+const intervalAdapter = (
+  matches : RegExpExecArray,
+  exclude : boolean,
+) : TIntervalObj => {
   const tmp : IParsedIntervalData = matches.groups;
   const allEvery = (typeof tmp.allEvery !== 'undefined')
     ? tmp.allEvery.toLocaleLowerCase()
@@ -502,14 +506,14 @@ const intervalAdapter = (matches : RegExpExecArray, exclude : boolean) => {
 
   const output = {
     all: (allEvery === 'all' || relative === ''),
+    denominator: 0,
     every: (allEvery === 'every' && relative !== ''),
     exclude,
     isFraction: false,
-    multiplier: (tmp.multiplyer === 'string' && typeof (tmp.multiplyer * 1) === 'number')
-      ? Number.parseInt(tmp.multiplyer, 10)
-      : 1,
+    multiplier: forceInt(tmp.multiplier, 1),
     relative,
     raw: matches[0],
+    suffix: '',
     time: null,
     unit: null,
   };
@@ -522,7 +526,7 @@ const intervalAdapter = (matches : RegExpExecArray, exclude : boolean) => {
   }
 
   return output;
-}
+};
 
 const parseFraction = (
   matches : IParsedIntervalData,
@@ -564,7 +568,7 @@ export const parseRawIntervals = (
   const post = (isObj(suffixes))
     ? suffixes
     : { first: ' gone', last: ' to go', half: 'Half way' };
-  const regex = /(?<=^|\s)(?<allEvery>all|every)?[_-]?(?<multiplyer>[0-9]+)?[_-]?(?<relative>(?:la|fir)st)?[_-]?(?:(?<hmsNum>[1-9][0-9]*)[_-]?(?<hmsUnit>[smh]?)|(?<numerator>[1-9])?[_-]?1\/(?<denominator>[2-9]|10))(?=\s|$)/ig;
+  const regex = /(?<=^|\s)(?<allEvery>all|every)?[_-]?(?<multiplier>[0-9]+)?[_-]?(?<relative>(?:la|fir)st)?[_-]?(?:(?<hmsNum>[1-9][0-9]*)[_-]?(?<hmsUnit>[smh]?)|(?<numerator>[1-9])?[_-]?1\/(?<denominator>[2-9]|10))(?=\s|$)/ig;
   let matches;
   let timeIntervals : TDoingSayData[] = [];
   let fractionIntervals : TDoingSayData[] = [];
@@ -622,7 +626,7 @@ export const parseRawIntervals = (
   return sortOffsets(filterOffsets(output, durationMilli));
 };
 
-export const sayDataIsValid = (data) => {
+export const sayDataIsValid = (data : unknown) : TDoingSayData[] | false => {
   let _data = data;
   if (typeof data === 'string') {
     try {
