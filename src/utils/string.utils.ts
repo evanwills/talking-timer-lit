@@ -1,7 +1,3 @@
-import { isObj } from "./data.utils";
-
-
-
 /**
  * normalise (and normalise) event name
  *

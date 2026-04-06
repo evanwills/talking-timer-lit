@@ -1,4 +1,5 @@
 import { LitElement, css, html } from 'lit';
+import { customElement } from 'lit/decorators.js';
 import { ifDefined } from 'lit/directives/if-defined.js';
 // import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { getEpre, millisecondsToTimeObj, timeObjToString } from '../utils/talking-timer.utils';
@@ -36,6 +37,7 @@ const sessionCompleteMsg = 'Take a few deep breaths. '
   + 'well and what can be improved on. Think about what was going '
   + 'on when things went wrong and how you might avoid doing the '
   + 'same thing next time.';
+// oxlint-disable-next-line no-unused-vars
 const aboutCritiquing = 'The greatest value of the speed throwing '
   + 'exercise is critiquing the pots you\'ve made after the '
   + 'throwing part of the session. '
@@ -44,6 +46,7 @@ const aboutCritiquing = 'The greatest value of the speed throwing '
   + 'Be kind and fair to yourself. '
   + 'The mistakes you make will have been made by every other '
   + 'potter in the world at one time or another.';
+// oxlint-disable-next-line no-unused-vars
 const aimsAndObjectives = 'The aim of this exercise is to throw a '
   + 'pot in a limited period of time, using all the time available. '
   + 'But not more and not less. '
@@ -57,6 +60,7 @@ const aimsAndObjectives = 'The aim of this exercise is to throw a '
   + 'cylinder as tall and thin as you can, pushing yourself without '
   + 'the requirement of keeping what you make, will improve your '
   + 'skills faster than anything else.';
+// oxlint-disable-next-line no-unused-vars
 const aboutFailure = 'This is an exercise where the expectation is '
   + 'that you\'ll cut everything you make in half, so there\'s no '
   + 'need to be precious. '
@@ -70,21 +74,18 @@ const aboutFailure = 'This is an exercise where the expectation is '
   + 'what was going on when the pot failed. '
   + 'Also think about what went right with the pot, even though '
   + 'the final result was a failure.';
+// oxlint-disable-next-line no-unused-vars
 const aboutFailureDecline = 'For most beginners (and many '
   + 'experienced potters) the first three or four speed thrown '
   + 'pots will get better with each pot. After that it is very '
   + 'common to see a decline in the quality. This is because your '
   + 'brain is getting tired.'
-const aboutTiming = ''
+// oxlint-disable-next-line no-unused-vars
+const aboutTiming = '';
 
 const rawSay = '1/2 30s last20 last15 allLast10';
 
-/**
- * An example element.
- *
- * @slot - This element has a slot
- * @csspart button - The button
- */
+@customElement('speed-throwing')
 export class SpeedThrowing extends LitElement {
   static properties = {
     _confirmed: { type: Boolean, state: true },
@@ -591,4 +592,6 @@ export class SpeedThrowing extends LitElement {
   // ======================================================
 };
 
-window.customElements.define('speed-throwing', SpeedThrowing);
+declare global {
+  interface HTMLElementTagNameMap { 'speed-throwing': SpeedThrowing }
+};

@@ -5,7 +5,11 @@
 
 import { isBoolTrue, isNonEmptyStr, isObj } from '../data.utils.ts';
 
-import type { TKeys, TLoggableVars, TVarsToLog } from '../../types/console-logger.d.ts';
+import type {
+  TKeys,
+  // TLoggableVars,
+  // TVarsToLog,
+} from '../../types/console-logger.d.ts';
 import { IStrKeyObj } from '../../types/generic-types';
 
 /**
@@ -41,7 +45,7 @@ const splitMultiKeys = (key : string) : string[][] => splitKeys(
  *
  * @returns {string[]}
  */
-export const orderKeys = (keys : string[], rev : boolean) : string[] => { // eslint-disable-line arrow-body-style
+export const orderKeys = (keys : string[], rev : boolean) : string[] => {
   return (Array.isArray(keys) && rev === true)
     ? [...keys].reverse()
     : keys;
@@ -145,7 +149,7 @@ export const logObjDeepKeyVal = (
         // unhandled exception within `ConsoleLogger` broke the end
         // user experience. Thus we're just letting the dev know we
         // couldn't log the method's output
-        console.error(`Error rendering function output for ${baseKey}()`);
+        console.error(`Error rendering function output for ${baseKey}()`, e);
       }
     } else {
       console.log(`${baseKey}:`, input);

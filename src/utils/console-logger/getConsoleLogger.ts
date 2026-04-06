@@ -1,9 +1,9 @@
-import { isObj } from '../data.utils.ts';
+import { getLocalValue } from '../local-storage.utils.ts';
 import { getSetFromCSV } from './console-logger.utils.ts';
+import { isObj } from '../data.utils.ts';
 import ConsoleLoggerDummy from './ConsoleLoggerDummy.class.ts';
 import ConsoleLogger from './ConsoleLogger.class.ts';
-import { getLocalValue } from '../local-storage.utils.ts';
-import { TVarsToLog } from '../../types/console-logger';
+import type { TVarsToLog } from '../../types/console-logger.d.ts';
 
 // ------------------------------------------------------------------
 // START: Local constants
@@ -110,7 +110,7 @@ const _forceLogging = (
  *
  * @returns List of config options
  */
-const _getOptionsArray = (options : unknown) : string[] => { // eslint-disable-line arrow-body-style
+const _getOptionsArray = (options : unknown) : string[] => {
   return (typeof options === 'string')
     ? options.replaceAll(/[\s,]+/g, ',')
       .split(',')
@@ -156,7 +156,7 @@ const _inLogMode = (
   show : boolean,
   name : string,
   id : string,
-) : boolean => { // eslint-disable-line arrow-body-style
+) : boolean => {
   return ((show === true
     && (globalThis.window === undefined || globalThis.window === null))
     || ((show === true && _isLocal() === true)

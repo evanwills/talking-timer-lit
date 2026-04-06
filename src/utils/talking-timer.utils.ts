@@ -1,4 +1,4 @@
-import { IStrKeyObj, ITimeObj, TWholePart } from '../types/generic-types';
+import type { FEpre, IStrKeyObj, ITimeObj, TWholePart } from '../types/generic-types.d.ts';
 
 export const multipliers : ITimeObj = {
   hours: 3600000,
@@ -18,7 +18,7 @@ export const multipliers : ITimeObj = {
  *
  * @returns {(method: string, before: boolean|null|string) : string}
  */
-export const getEpre = (componentName : string, componentID : string = '') => {
+export const getEpre = (componentName : string, componentID : string = '') : FEpre => {
   const tail = (componentID !== '')
     ? ` (#${componentID})`
     : '';
@@ -27,7 +27,6 @@ export const getEpre = (componentName : string, componentID : string = '') => {
     method : string,
     before : boolean | string | null = null
   ) : string => {
-    const beforeT = typeof before;
     let suffix = '';
 
     if (typeof before === 'boolean') {

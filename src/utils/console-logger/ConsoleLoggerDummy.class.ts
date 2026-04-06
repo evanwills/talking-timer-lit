@@ -76,7 +76,6 @@ export default class ConsoleLoggerDummy {
    *                           should be normal (expanded) or
    *                           collapsed
    */
-  // eslint-disable-next-line no-unused-vars
   constructor(
     name : string,
     id : string = '',
@@ -140,7 +139,6 @@ export default class ConsoleLoggerDummy {
    *
    * @returns {void}
    */
-  // eslint-disable-next-line class-methods-use-this, no-unused-vars
   group(_method : string, _suffix : string | null = null) : void {
     // This is intentionally empty to prevent unwanted logging in
     // production
@@ -193,12 +191,11 @@ export default class ConsoleLoggerDummy {
    *
    * @returns {void}
    */
-  // eslint-disable-next-line class-methods-use-this
   after(
     _method : string,
-    _logableVars : TLoggableVars = {}, // eslint-disable-line no-unused-vars
-    _endTwice : boolean = true, // eslint-disable-line no-unused-vars
-    _swapGroup : boolean = false, // eslint-disable-line no-unused-vars
+    _logableVars : TLoggableVars = {},
+    _endTwice : boolean = true,
+    _swapGroup : boolean = false,
   ) : void {
     // This is intentionally empty to prevent unwanted logging in
     // production
@@ -216,12 +213,11 @@ export default class ConsoleLoggerDummy {
    *                     method is `group()` then call
    *                     `groupCollapsed()` or vise versa
    */
-  // eslint-disable-next-line class-methods-use-this
   before(
     _method : string,
-    _logableVars : TLoggableVars = {}, // eslint-disable-line no-unused-vars
-    _startTwice : boolean = true, // eslint-disable-line no-unused-vars
-    _swapGroup : boolean = false, // eslint-disable-line no-unused-vars
+    _logableVars : TLoggableVars = {},
+    _startTwice : boolean = true,
+    _swapGroup : boolean = false,
   ) : void {
     // This is intentionally empty to prevent unwanted logging in
     // production
@@ -239,12 +235,11 @@ export default class ConsoleLoggerDummy {
    * @param _endTwice    Whether or not to call console.groupEnd()
    *                     twice
    */
-  // eslint-disable-next-line class-methods-use-this
   error(
     method : string,
     message : string,
-    _logableVars : TLoggableVars = {}, // eslint-disable-line no-unused-vars
-    _endTwice : boolean = false, // eslint-disable-line no-unused-vars
+    _logableVars : TLoggableVars = {},
+    _endTwice : boolean = false,
   ) : void {
     console.group(this.groupName(method, '[[ERROR]]'));
     console.error(message);
@@ -262,12 +257,11 @@ export default class ConsoleLoggerDummy {
    * @param _message     Error message to be rendered
    * @param _logableVars Lists of values to be logged
    */
-  // eslint-disable-next-line class-methods-use-this
   info(
     _method : string,
     _message : string,
-    _logableVars = {}, // eslint-disable-line no-unused-vars
-    _endTwice = false, // eslint-disable-line no-unused-vars
+    _logableVars = {},
+    _endTwice = false,
   ) : void {
     // This is intentionally empty to prevent unwanted logging in
     // production
@@ -288,12 +282,11 @@ export default class ConsoleLoggerDummy {
    *
    * @returns {void}
    */
-  // eslint-disable-next-line class-methods-use-this
   only(
     _method : string,
-    _logableVars : TLoggableVars = {}, // eslint-disable-line no-unused-vars
-    _noEnd : boolean = false, // eslint-disable-line no-unused-vars
-    _swapGroup : boolean = false, // eslint-disable-line no-unused-vars
+    _logableVars : TLoggableVars = {},
+    _noEnd : boolean = false,
+    _swapGroup : boolean = false,
   ) : void {
     // This is intentionally empty to prevent unwanted logging in
     // production
@@ -322,12 +315,11 @@ export default class ConsoleLoggerDummy {
    * @param _endTwice    Whether or not to call console.groupEnd()
    *                     twice
    */
-  // eslint-disable-next-line class-methods-use-this
   warn(
     _method : string,
     _message : string,
-    _logableVars : TLoggableVars = {}, // eslint-disable-line no-unused-vars
-    _endTwice : boolean = false, // eslint-disable-line no-unused-vars
+    _logableVars : TLoggableVars = {},
+    _endTwice : boolean = false,
   ) : void {
     // This is intentionally empty to prevent unwanted logging in
     // production

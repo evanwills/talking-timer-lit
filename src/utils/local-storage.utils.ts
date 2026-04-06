@@ -43,8 +43,11 @@ const _getLocalVal = (
         case 'json':
           try {
             return JSON.parse(output);
-          } catch (e) {
-            console.error('could not parse JSON from localStorage prop: ')
+          } catch (error : unknown) {
+            console.error(
+              'could not parse JSON from localStorage prop:',
+              error,
+            );
           }
       }
     }

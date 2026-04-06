@@ -12,7 +12,7 @@ import type {
   TEventListeners,
   TLog,
   TListenerList,
-  TComponentComms,
+  // TComponentComms,
 } from '../../types/comms.d.ts';
 
 /**
@@ -30,41 +30,32 @@ import type {
  * where a client listens for individual events. Then, when an event
  * is fired only the listeners for that event are called.
  *
- * @method disableLogging()   Turn logging __off__ for ComponentComms
- * @method enableLogging()    Turn logging __on__ for ComponentComms
- * @method addListener(event:string,id:string,watcher:FListener,replace:boolean)
+ * @function disableLogging()   Turn logging __off__ for ComponentComms
+ * @function enableLogging()    Turn logging __on__ for ComponentComms
+ * @function addListener(event:string,id:string,watcher:FListener,replace:boolean)
  *                 Add a watcher for a given event for a given
  *                 compoenent
- * @method removeListener(event:string,id:string)
+ * @function removeListener(event:string,id:string)
  *                 Remove a watcher matching event/ID pair
- * @method removeListenersById(id:string)
+ * @function removeListenersById(id:string)
  *                 Remove watchers for all events for a given
  *                 component ID
- * @method dispatch(event:string,data:any,src:string)
+ * @function dispatch(event:string,data:any,src:string)
  *                 Dispatch an event (and maybe some data) to all the
  *                 components that are watching for that event
- * @method getLogs(event:string,limit:number,lastFirst:boolean)
+ * @function getLogs(event:string,limit:number,lastFirst:boolean)
  *                 Get logs for dispatched events.
- * @method clearLogs()
+ * @function clearLogs()
  *                 Delete all the logs that have been stored
  */
 export class ComponentComms {
   // ----------------------------------------------------------------
   // START: Private properties
 
-  /**
-   * @property
-   */
   _actions : TEventListeners = {};
 
-  /**
-   * @property {]}
-   */
   _log : TLog[] = [];
 
-  /**
-   * @property
-   */
   _dispatcher : TDispatcherMode = '_simpleDispatcher';
 
   //  END:  Private properties
@@ -145,15 +136,14 @@ export class ComponentComms {
     const { ext, src } = getLogBits(_src);
     const _event = normalise(event);
 
-    // eslint-disable-next-line no-console
     console.groupCollapsed(`ComponentComms.dispatch("${_event}")${ext}`);
 
     if (src !== '') {
-      console.log('SOURCE:', src); // eslint-disable-line no-console
+      console.log('SOURCE:', src);
     }
 
-    console.log('event:', _event); // eslint-disable-line no-console
-    console.log('data:', data); // eslint-disable-line no-console
+    console.log('event:', _event);
+    console.log('data:', data);
 
     const IDs = this._simpleDispatcher(_event, data);
 
@@ -166,7 +156,7 @@ export class ComponentComms {
       ids: IDs,
     });
 
-    console.groupEnd(); // eslint-disable-line no-console
+    console.groupEnd();
 
     return IDs;
   }
@@ -183,7 +173,7 @@ export class ComponentComms {
    *                            if the there is already a watcher set
    *                            for the event/ID pair.
    *
-   * @return {void}
+   * @returns {void}
    */
   _addListenerInner(
     event : string,
@@ -377,7 +367,11 @@ export class ComponentComms {
    * @param data  Data to dispatch along with event
    * @param src   Source of the event
    */
-  dispatch(event : string, data = null, src = '') : void {
+  dispatch(
+    event : string,
+    data : unknown = null,
+    src : string = '',
+  ) : void {
     this[this._dispatcher](event, data, src);
   }
 
@@ -389,8 +383,6 @@ export class ComponentComms {
                       (Default is 10)
    * @param lastFirst Whether or not logs should be returned ordered
                       newest to oldest or oldest to newest
-   *
-   * @returns {TLog[]} list of logs
    */
   getLogs(
     event : string = '',

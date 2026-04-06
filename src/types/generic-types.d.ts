@@ -1,6 +1,10 @@
 export type TNumberOptionData = {
   label: string,
-  value: number
+  value: number,
+};
+export type TStringOptionData = {
+  label: string,
+  value: string,
 };
 
 export type TDoingSayData = {
@@ -24,10 +28,10 @@ export type TSuffixes = {
 };
 
 export interface ITimeObj extends IStrKeyObj {
-  hours: number,
-  minutes: number,
-  seconds: number,
-  tenths ? : number,
+  hours : number,
+  minutes : number,
+  seconds : number,
+  tenths : number,
 }
 
 export type TWholePart = {
@@ -44,8 +48,8 @@ export type TIntervalObj = {
   raw: string,
   relative: string,
   suffix: string,
-  time: number,
-  unit: string,
+  time: number | null,
+  unit: string | null,
 };
 
 export type TIntervalData = {
@@ -70,16 +74,28 @@ export type TIntervalMsgDataObjWithRate = TIntervalMsgDataObj & {
   rate: number,
 };
 
-export interface IParsedIntervalData extends IStrKeyObjString {
+export interface IParsedIntervalData extends IStrKeyObj {
   allEvery: string,
-  denominator: string,
-  hmsNum: string,
+  denominator: number,
+  hmsNum: number,
   hmsUnit: string,
-  multiplier: string,
-  numerator: string,
+  multiplier: number,
+  numerator: number,
   relative: string,
+  raw: string,
 }
 
 export type TParsedIntervalDataObj = {
   groups: IParsedIntervalData,
+};
+
+export type FEpre = (method: string, before: boolean | null | string) => string;
+
+export type TTalkingTimerState = 'unset' | 'ready' | 'starting' | 'running' | 'paused' | 'ending' | 'ended';
+
+export type TTTconfig = {
+  duration: number,
+  noEndChime: boolean,
+  noSayEnd: boolean,
+  noSayStart: boolean,
 };

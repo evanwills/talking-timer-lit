@@ -1,12 +1,11 @@
-import {
+import type {
   IParsedIntervalData,
+  IStrKeyObjString,
   TDoingSayData,
   TIntervalObj,
-  TParsedIntervalDataObj,
   TSuffixes,
-} from "../types/generic-types";
-import { forceInt, isNum } from "./data.utils";
-import { isObj } from "./general.utils";
+} from '../types/generic-types.d.ts';
+import { forceInt, isObj } from './data.utils.ts';
 
 /**
  * tooClose() checks whether the current value is within 5 seconds
@@ -49,10 +48,10 @@ export const tooCloseAny = (offset: number, previous: number[]) : boolean => {
  * posMinus() ensures that the value of a subtraction is always
  * positive (or zero)
  *
- * @param a
- * @param b
+ * @param a number to be subtracted from
+ * @param b number to subtract
  *
- * @return positive value of a - b
+ * @returns positive value of a - b
  */
 export const posMinus = (a : number, b : number) : number => {
   return (a > b)
@@ -272,14 +271,20 @@ const getRate = (msg : string) : number => {
 
 const getRelativeMsgs = (intervalObj : TIntervalObj, milliseconds : number, suffix : string) => {
   const output = [];
-  let interval = getX(intervalObj.unit);
+  let interval = (intervalObj.unit !== null)
+    ? getX(intervalObj.unit)
+    : 0;
   let count = 0;
 
   if (intervalObj.every === true) {
-    interval *= intervalObj.time;
+    interval *= (intervalObj.time !== null)
+      ? intervalObj.time
+      : 1;
     count = milliseconds / interval;
   } else {
-    count = intervalObj.time;
+    count = (intervalObj.time !== null)
+      ? intervalObj.time
+      : 0;
   }
   const modifier = (intervalObj.relative !== 'first')
     ? 0
@@ -322,12 +327,16 @@ export const sayListAdapter = (data : TDoingSayData[]) : TDoingSayData[] => data
  */
 const getMultiplierMsgs = (intervalObj : TIntervalObj, milliseconds : number, suffix : string) : TDoingSayData[] => {
   const output = [];
-  const interval = (intervalObj.time * getX(intervalObj.unit));
+  const interval = (intervalObj.time !== null && intervalObj.unit !== null)
+    ? (intervalObj.time * getX(intervalObj.unit))
+    : 0;
   const modifier = (intervalObj.relative === 'last')
     ? 0
     : milliseconds
-
-  for (let offset = interval; offset <= intervalObj.time; offset += interval) {
+  const time = (intervalObj.time !== null)
+    ? intervalObj.time
+    : 0;
+  for (let offset = interval; offset <= time; offset += interval) {
     output.push(
       sayItemAdapter({
         offset: posMinus(modifier, offset),
@@ -381,7 +390,9 @@ export const getTimeOffsetAndMessage = (
     }
   }
 
-  const interval = (intervalObj.time * 1000);
+  const interval = (intervalObj.time !== null)
+    ? (intervalObj.time * 1000)
+    : 0;
   const offset = (intervalObj.relative !== 'first')
     ? interval
     : (milliseconds - interval);
@@ -493,26 +504,16 @@ export const getFractionOffsetAndMessage = (
  * @returns
  */
 const intervalAdapter = (
-  matches : RegExpExecArray,
-  exclude : boolean,
+  intObj : IParsedIntervalData,
 ) : TIntervalObj => {
-  const tmp : IParsedIntervalData = matches.groups;
-  const allEvery = (typeof tmp.allEvery !== 'undefined')
-    ? tmp.allEvery.toLocaleLowerCase()
-    : '';
-  const relative = (typeof tmp.relative !== 'undefined')
-    ? tmp.relative.toLocaleLowerCase()
-    : '';
-
   const output = {
-    all: (allEvery === 'all' || relative === ''),
+    all: (intObj.allEvery === 'all' || intObj.relative === ''),
     denominator: 0,
-    every: (allEvery === 'every' && relative !== ''),
-    exclude,
+    every: (intObj.allEvery === 'every' && intObj.relative !== ''),
     isFraction: false,
-    multiplier: forceInt(tmp.multiplier, 1),
-    relative,
-    raw: matches[0],
+    multiplier: forceInt(intObj.multiplier, 1),
+    raw: intObj.raw,
+    relative: intObj.relative,
     suffix: '',
     time: null,
     unit: null,
@@ -522,6 +523,7 @@ const intervalAdapter = (
     output.all = false;
     output.multiplier = 0;
   } else if (output.all === true) {
+    output.every = false;
     output.multiplier = 0;
   }
 
@@ -529,13 +531,12 @@ const intervalAdapter = (
 };
 
 const parseFraction = (
-  matches : IParsedIntervalData,
   interval : TIntervalObj,
   durationMilli : number,
-  post : TSuffixes,
+  suffixes : TSuffixes,
 ) => {
   // item is a fraction
-  const denominator = Number.parseInt(matches.denominator, 10);
+  const { denominator } = interval;
 
   interval.isFraction = true;
   interval.denominator = denominator;
@@ -544,32 +545,80 @@ const parseFraction = (
     interval.multiplier = (denominator - 1);
   }
 
-  return getFractionOffsetAndMessage(interval, durationMilli, post);
+  return getFractionOffsetAndMessage(interval, durationMilli, suffixes);
+};
+
+const makeIntervalObj = (matches : RegExpExecArray | null) : TIntervalObj | null => {
+  if (matches === null) {
+    return null;
+  }
+
+  const output : IParsedIntervalData= {
+    allEvery: '',
+    denominator: 0,
+    hmsNum: -1,
+    hmsUnit: '',
+    multiplier: -1,
+    numerator: -1,
+    relative: '',
+    raw: matches[0],
+  }
+
+  if (typeof matches.groups !== 'undefined') {
+    const g : IStrKeyObjString = matches.groups;
+
+    if (typeof g.allEvery !== 'undefined') {
+      output.allEvery = g.allEvery.toLocaleLowerCase();
+    }
+
+    if (typeof g.denominator !== 'undefined') {
+      output.denominator = Number.parseInt(g.denominator, 10);
+    }
+
+    if (typeof g.hmsNum !== 'undefined') {
+      output.hmsNum = Number.parseInt(g.hmsNum, 10);
+    }
+
+    if (typeof g.hmsUnit !== 'undefined') {
+      output.hmsUnit = g.hmsUnit.toLocaleLowerCase();
+    }
+
+    if (typeof g.multiplier !== 'undefined') {
+      output.multiplier = Number.parseInt(g.multiplier, 10);
+    }
+
+    if (typeof g.numerator !== 'undefined') {
+      output.numerator = Number.parseInt(g.numerator, 10);
+    }
+
+    if (typeof g.relative !== 'undefined') {
+      output.relative = g.relative.toLocaleLowerCase();
+    }
+  }
+
+  return intervalAdapter(output);
 };
 
 /**
  * parseRawIntervals() builds an array of objects which in turn can
  * be used to build promises that trigger speech events.
  *
- * @param {number} durationMilli
- * @param {string} rawIntervals
- * @param {boolean} omit
- * @param {string} priority talking timer config
- *
- * @returns {array}
+ * @param durationMilli
+ * @param rawIntervals
+ * @param priority talking timer config
+ * @param suffixes
  */
 export const parseRawIntervals = (
   durationMilli : number,
   rawIntervals : string,
-  omit = false,
-  priority = 'fraction',
+  priority : 'order' | 'time' | 'fraction' = 'fraction',
   suffixes : TSuffixes | null = null,
 ) => {
-  const post = (isObj(suffixes))
+  const _suffixes = (isObj(suffixes))
     ? suffixes
     : { first: ' gone', last: ' to go', half: 'Half way' };
   const regex = /(?<=^|\s)(?<allEvery>all|every)?[_-]?(?<multiplier>[0-9]+)?[_-]?(?<relative>(?:la|fir)st)?[_-]?(?:(?<hmsNum>[1-9][0-9]*)[_-]?(?<hmsUnit>[smh]?)|(?<numerator>[1-9])?[_-]?1\/(?<denominator>[2-9]|10))(?=\s|$)/ig;
-  let matches;
+  let intObj : TIntervalObj | null = null;
   let timeIntervals : TDoingSayData[] = [];
   let fractionIntervals : TDoingSayData[] = [];
   let orderIntervals : TDoingSayData[] = [];
@@ -577,35 +626,25 @@ export const parseRawIntervals = (
   if (typeof rawIntervals !== 'string' || rawIntervals === '') {
     return [];
   }
-  const exclude = (typeof omit === 'boolean')
-    ? omit
-    : false;
 
-  while ((matches = regex.exec(rawIntervals)) !== null) {
-    const tmp : IParsedIntervalData = matches.groups;
-    const interval = intervalAdapter(matches, exclude);
+  while ((intObj = makeIntervalObj(regex.exec(rawIntervals))) !== null) {
+    let tmpInt : TDoingSayData[] = [];
+    let _tmpP = '';
 
-    if (typeof tmp.denominator !== 'undefined') {
-      const tmpIntervals = parseFraction(tmp, interval, durationMilli, post);
-
-      if (priority === 'order') {
-        orderIntervals = orderIntervals.concat(tmpIntervals);
-      } else {
-        fractionIntervals = fractionIntervals.concat(tmpIntervals);
-      }
+    if (intObj.denominator > 0) {
+      tmpInt = parseFraction(intObj, durationMilli, _suffixes);
+      _tmpP = 'fraction';
     } else {
-      // item is a number
-      tmp.hmsNum = Number.parseInt(tmp.hmsNum, 10);
-      interval.unit = getX(tmp.hmsUnit);
-      interval.time = tmp.hmsNum;
+      tmpInt = getTimeOffsetAndMessage(intObj, durationMilli, _suffixes);
+      _tmpP = 'time';
+    }
 
-      const tmpIntervals = getTimeOffsetAndMessage(interval, durationMilli, post);
-
-      if (priority === 'order') {
-        orderIntervals = orderIntervals.concat(tmpIntervals);
-      } else {
-        timeIntervals = timeIntervals.concat(tmpIntervals);
-      }
+    if (priority === 'order') {
+      orderIntervals = orderIntervals.concat(tmpInt);
+    } else if (_tmpP === 'fraction') {
+      fractionIntervals = fractionIntervals.concat(tmpInt);
+    } else {
+      timeIntervals = timeIntervals.concat(tmpInt);
     }
   }
 
@@ -632,6 +671,7 @@ export const sayDataIsValid = (data : unknown) : TDoingSayData[] | false => {
     try {
       _data = JSON.parse(data);
     } catch (e) {
+      console.error('Error parsing data string', e);
       return false;
     }
   }

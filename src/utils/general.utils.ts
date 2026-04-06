@@ -5,7 +5,6 @@ export const makeNullNum = (
   preceeding : string | null = null,
   max : number = 59,
 ) : string | null => {
-  const t = typeof input;
   let output : number = 0;
 
   if (typeof input === 'string' && input.trim() !== '') {
@@ -34,7 +33,7 @@ export const makeNullNum = (
 };
 
 export const getTimingMsg = (duration : number) : string => {
-  const seconds = (duration / 1000);
+  const seconds = (duration / 1000); // oxlint-disable-line no-unused-vars
   let thirdStr = 'minute';
   let sixthStr = '30 seconds';
   return 'Just a quick note about timing. '
@@ -82,3 +81,18 @@ export const getSessionCompleteExtMsg = (type : 'bowls' | 'cylinders') : string 
 
   return `${pre} ${type} ${post} ${typeMsg[type]}`;
 }
+
+export const getEventIdVal = (event : Event) : { id: string, value: string } => {
+  let id = '';
+  let value = '';
+
+  if (event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement || event.target instanceof HTMLButtonElement) {
+    id = event.target.id;
+    value = event.target.value;
+  }
+
+  return {
+    id,
+    value,
+  };
+};

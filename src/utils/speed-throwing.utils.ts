@@ -1,8 +1,8 @@
-import { html, TemplateResult } from 'lit';
+import { html, type TemplateResult } from 'lit';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
-import { TDoingSayData, TNumberOptionData } from '../types/generic-types';
-import { isNum } from './data.utils';
-import { ucFirst } from './string.utils';
+import type { TDoingSayData, TNumberOptionData } from '../types/generic-types.d.ts';
+import { isNum } from './data.utils.ts';
+import { ucFirst } from './string.utils.ts';
 
 /**
  * Get the (human readable) amount time for centring a pot
@@ -207,3 +207,10 @@ const withinTollerance = (
   tollerance : number = 5,
 ) : boolean => (actual >= (target - tollerance)
   && (actual <= target + tollerance));
+
+
+export const getThrowingType = (type : string) : 'cylinders' | 'bowls' => {
+  return (type === 'bowls')
+    ? 'bowls'
+    : 'cylinders';
+};
